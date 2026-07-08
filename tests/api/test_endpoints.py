@@ -11,6 +11,7 @@ from roboagent_guard.simulator.scenarios import scenario_request
     [
         "/",
         "/health",
+        "/healthz",
         "/SKILL.md",
         "/skill.md",
         "/capabilities",
@@ -30,6 +31,11 @@ def test_health_shape(client):
         "service": "roboagent-guard",
         "version": "1.0.0",
     }
+    assert client.get("/healthz").json() == client.get("/health").json()
+
+
+def test_root_head(client):
+    assert client.head("/").status_code == 200
 
 
 def test_evaluate_safe(client):

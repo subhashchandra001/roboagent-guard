@@ -58,6 +58,16 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok", service="roboagent-guard", version="1.0.0")
 
 
+@app.head("/")
+def root_head() -> None:
+    return None
+
+
+@app.get("/healthz")
+def healthz() -> HealthResponse:
+    return health()
+
+
 @app.get("/SKILL.md", response_class=PlainTextResponse)
 def skill_md(state: StateDep) -> str:
     text = Path("SKILL.md").read_text(encoding="utf-8")

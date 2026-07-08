@@ -83,6 +83,22 @@ Example response:
 {"status":"ok","service":"roboagent-guard","version":"1.0.0"}
 ```
 
+### GET /healthz
+
+Alias for `GET /health`. This is useful for hosting platform health checks.
+
+Example:
+
+```bash
+curl --fail https://roboagent-guard.onrender.com/healthz
+```
+
+Example response:
+
+```json
+{"status":"ok","service":"roboagent-guard","version":"1.0.0"}
+```
+
 ### GET /SKILL.md
 
 Returns this agent-facing Markdown file.
