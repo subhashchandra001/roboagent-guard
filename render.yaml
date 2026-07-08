@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: roboagent-guard
+    env: python
+    plan: free
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: uv run uvicorn roboagent_guard.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: POLICY_VERSION
+        value: 1.0.0
+      - key: AUDIT_PATH
+        value: /tmp/roboagent-guard-audit.jsonl

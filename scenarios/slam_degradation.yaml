@@ -1,0 +1,13 @@
+description: SLAM degradation requires stop and relocalize.
+expected_decision: modify
+request:
+  request_id: slam-degradation
+  nonce: slam-degradation-nonce
+  timestamp: "2026-07-04T16:00:00Z"
+  caller: {id: planner-agent-01, role: planner, authorized_actions: [navigate, stop, relocalize]}
+  action: {type: navigate, linear_speed_mps: 0.25, angular_speed_rps: 0.0, target: {x: 2.0, y: 0.0}, save_map: false, share_raw_camera: false, store_sensor_data: false, recipient_id: null}
+  robot_state: {battery_percent: 60.0, emergency_stop_available: true, nearest_obstacle_m: 1.5, surface: smooth, pitch_disturbance_deg: 1.0, roll_disturbance_deg: 1.0}
+  perception: {illumination_lux: 60.0, blur_score: 0.5, slam_inlier_ratio: 0.18, localization_confidence: 0.22, map_entropy: 0.72, sensor_age_ms: 300}
+  privacy: {person_detected: false, private_zone: false, face_data_present: false, privacy_filter_applied: false, recipient_authorized: false, retention_seconds: 0}
+  approval: {token: null}
+  simulation_seed: 42

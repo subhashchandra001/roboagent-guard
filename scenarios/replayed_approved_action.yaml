@@ -1,0 +1,13 @@
+description: Same request and nonce are blocked on replay.
+expected_decision: block
+request:
+  request_id: replay-demo
+  nonce: replay-demo-nonce
+  timestamp: "2026-07-04T16:00:00Z"
+  caller: {id: planner-agent-01, role: planner, authorized_actions: [navigate, stop, relocalize]}
+  action: {type: navigate, linear_speed_mps: 0.15, angular_speed_rps: 0.0, target: {x: 1.0, y: 0.0}, save_map: false, share_raw_camera: false, store_sensor_data: false, recipient_id: null}
+  robot_state: {battery_percent: 82.0, emergency_stop_available: true, nearest_obstacle_m: 2.0, surface: smooth, pitch_disturbance_deg: 1.0, roll_disturbance_deg: 1.0}
+  perception: {illumination_lux: 150.0, blur_score: 0.1, slam_inlier_ratio: 0.9, localization_confidence: 0.95, map_entropy: 0.1, sensor_age_ms: 100}
+  privacy: {person_detected: false, private_zone: false, face_data_present: false, privacy_filter_applied: false, recipient_authorized: false, retention_seconds: 0}
+  approval: {token: null}
+  simulation_seed: 42

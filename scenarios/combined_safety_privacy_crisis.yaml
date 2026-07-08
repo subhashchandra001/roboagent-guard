@@ -1,0 +1,13 @@
+description: Combined physical, SLAM, privacy, and authorization crisis.
+expected_decision: block
+request:
+  request_id: combined-crisis
+  nonce: combined-crisis-nonce
+  timestamp: "2026-07-04T16:00:00Z"
+  caller: {id: unknown-agent, role: observer, authorized_actions: []}
+  action: {type: navigate, linear_speed_mps: 0.7, angular_speed_rps: 0.3, target: {x: 3.0, y: 2.0}, save_map: true, share_raw_camera: true, store_sensor_data: true, recipient_id: unauthorized-recipient}
+  robot_state: {battery_percent: 8.0, emergency_stop_available: true, nearest_obstacle_m: 0.25, surface: uneven, pitch_disturbance_deg: 12.0, roll_disturbance_deg: 10.0}
+  perception: {illumination_lux: 5.0, blur_score: 0.92, slam_inlier_ratio: 0.16, localization_confidence: 0.2, map_entropy: 0.9, sensor_age_ms: 4000}
+  privacy: {person_detected: true, private_zone: true, face_data_present: true, privacy_filter_applied: false, recipient_authorized: false, retention_seconds: 86400}
+  approval: {token: null}
+  simulation_seed: 42

@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.coverage
+htmlcov/
+.env
+artifacts/traces/*.jsonl
+artifacts/nanda_traces/*.jsonl
+artifacts/reports/*
+!artifacts/reports/.gitkeep
+!artifacts/traces/.gitkeep
+!artifacts/nanda_traces/.gitkeep
