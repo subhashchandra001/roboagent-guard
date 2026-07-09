@@ -213,50 +213,17 @@
 
       .particle-field span {
         position: absolute;
-        width: 3px;
-        height: 3px;
+        top: var(--top);
+        left: var(--left);
+        width: var(--size);
+        height: var(--size);
         border-radius: 50%;
-        background: rgba(244, 251, 255, 0.74);
+        background: var(--spark);
         box-shadow:
-          0 0 10px rgba(108, 249, 216, 0.68),
-          0 0 22px rgba(105, 167, 255, 0.34);
-        animation: twinkle 4.8s ease-in-out infinite;
-      }
-
-      .particle-field span:nth-child(1) {
-        top: 12%;
-        left: 18%;
-        animation-delay: 0s;
-      }
-
-      .particle-field span:nth-child(2) {
-        top: 20%;
-        left: 74%;
-        animation-delay: 0.8s;
-      }
-
-      .particle-field span:nth-child(3) {
-        top: 38%;
-        left: 92%;
-        animation-delay: 1.5s;
-      }
-
-      .particle-field span:nth-child(4) {
-        top: 58%;
-        left: 12%;
-        animation-delay: 2.1s;
-      }
-
-      .particle-field span:nth-child(5) {
-        top: 76%;
-        left: 49%;
-        animation-delay: 2.8s;
-      }
-
-      .particle-field span:nth-child(6) {
-        top: 86%;
-        left: 84%;
-        animation-delay: 3.4s;
+          0 0 var(--glow-a) var(--glow),
+          0 0 var(--glow-b) var(--halo);
+        animation: twinkle var(--duration) ease-in-out infinite;
+        animation-delay: var(--delay);
       }
 
       .hero-main,
@@ -540,7 +507,7 @@
           opacity: 0.82;
         }
         55% {
-          transform: translate3d(10px, -12px, 0) scale(1.2);
+          transform: translate3d(var(--drift-x), var(--drift-y), 0) scale(var(--peak-scale));
           opacity: 1;
         }
         80% {
@@ -1161,7 +1128,6 @@
       <section class="hero">
         <div class="hero-copy">
           <div class="particle-field" aria-hidden="true">
-            <span></span><span></span><span></span><span></span><span></span><span></span>
           </div>
           <div class="hero-main">
             <p class="eyebrow">Deterministic agentic safety layer</p>
@@ -1399,6 +1365,69 @@
         element.textContent = value || "waiting";
       }
 
+      function createParticles() {
+        const field = document.querySelector(".particle-field");
+        if (!field) return;
+
+        const colors = [
+          {
+            spark: "rgba(244, 251, 255, 0.86)",
+            glow: "rgba(108, 249, 216, 0.72)",
+            halo: "rgba(105, 167, 255, 0.38)",
+          },
+          {
+            spark: "rgba(198, 255, 239, 0.82)",
+            glow: "rgba(80, 242, 194, 0.72)",
+            halo: "rgba(197, 150, 255, 0.34)",
+          },
+          {
+            spark: "rgba(224, 235, 255, 0.82)",
+            glow: "rgba(105, 167, 255, 0.68)",
+            halo: "rgba(108, 249, 216, 0.32)",
+          },
+          {
+            spark: "rgba(255, 240, 202, 0.78)",
+            glow: "rgba(255, 211, 107, 0.58)",
+            halo: "rgba(108, 249, 216, 0.26)",
+          },
+        ];
+        const columns = 10;
+        const rows = 6;
+        const total = columns * rows;
+        field.textContent = "";
+
+        for (let index = 0; index < total; index += 1) {
+          const column = index % columns;
+          const row = Math.floor(index / columns);
+          const dot = document.createElement("span");
+          const jitterX = (Math.random() - 0.5) * 7.5;
+          const jitterY = (Math.random() - 0.5) * 8.5;
+          const left = ((column + 0.5) / columns) * 100 + jitterX;
+          const top = ((row + 0.5) / rows) * 100 + jitterY;
+          const size = 1.8 + Math.random() * 3.6;
+          const duration = 3.2 + Math.random() * 5.8;
+          const delay = -Math.random() * duration;
+          const driftX = -12 + Math.random() * 24;
+          const driftY = -18 + Math.random() * 20;
+          const palette = colors[Math.floor(Math.random() * colors.length)];
+
+          dot.style.setProperty("--left", `${Math.max(2, Math.min(98, left)).toFixed(2)}%`);
+          dot.style.setProperty("--top", `${Math.max(3, Math.min(97, top)).toFixed(2)}%`);
+          dot.style.setProperty("--size", `${size.toFixed(2)}px`);
+          dot.style.setProperty("--duration", `${duration.toFixed(2)}s`);
+          dot.style.setProperty("--delay", `${delay.toFixed(2)}s`);
+          dot.style.setProperty("--drift-x", `${driftX.toFixed(1)}px`);
+          dot.style.setProperty("--drift-y", `${driftY.toFixed(1)}px`);
+          dot.style.setProperty("--peak-scale", `${(1.05 + Math.random() * 0.95).toFixed(2)}`);
+          dot.style.setProperty("--glow-a", `${(7 + Math.random() * 16).toFixed(1)}px`);
+          dot.style.setProperty("--glow-b", `${(18 + Math.random() * 30).toFixed(1)}px`);
+          dot.style.setProperty("--spark", palette.spark);
+          dot.style.setProperty("--glow", palette.glow);
+          dot.style.setProperty("--halo", palette.halo);
+          field.appendChild(dot);
+        }
+      }
+
       async function api(path, options = {}) {
         const response = await fetch(path, options);
         if (!response.ok) {
@@ -1599,6 +1628,8 @@
           $("copyResult").textContent = "Copy JSON";
         }, 900);
       });
+
+      createParticles();
 
       loadHealth()
         .then(() => runScenario(state.selected))
