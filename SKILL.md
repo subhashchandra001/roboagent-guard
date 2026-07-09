@@ -173,6 +173,7 @@ Example response:
   "autonomy_model": {"default": "agent_autonomous", "human_intervention": "exception_only"},
   "required_fields": ["request_id", "nonce", "timestamp", "caller", "action", "robot_state", "perception", "privacy", "simulation_seed"],
   "optional_fields": ["evaluation_time", "approval", "client_risk_score", "safety_approved", "metadata"],
+  "demo_endpoints": {"judge_skill_test": "POST /v1/agent-skill-test", "composed_mission_planner": "POST /v1/compose/mission-plan"},
   "scenario_names": ["combined_safety_privacy_crisis", "hidden_low_slam_confidence", "low_light_high_speed", "low_light_slow_motion", "normal_navigation", "person_in_private_zone", "replayed_approved_action", "slam_degradation", "unauthorized_camera_request", "uneven_surface_high_blur"]
 }
 ```
@@ -199,6 +200,10 @@ Example response:
   "health_url": "PUBLIC_BASE_URL/health",
   "capabilities_url": "PUBLIC_BASE_URL/capabilities",
   "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
+  "demo_endpoints": {
+    "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},
+    "composed_mission_planner": {"method": "POST", "path": "/v1/compose/mission-plan"}
+  },
   "authentication": {"required": false, "note": "Hackathon demonstration service. Caller authorization is represented in the request and verified against demonstration policy."}
 }
 ```
@@ -366,6 +371,54 @@ Example response:
 
 ```json
 {"passed": true, "safe_decision": "approve", "unsafe_decision": "block"}
+```
+
+### POST /v1/agent-skill-test
+
+Runs a judge-style proof that an unfamiliar agent can use this service from `SKILL.md` alone. It checks the SkillMD instructions, reads capabilities, evaluates representative safe, constrained, modified, and blocked actions, and confirms routine paths do not require human intervention.
+
+Example:
+
+```bash
+curl --fail -X POST PUBLIC_BASE_URL/v1/agent-skill-test
+```
+
+Example response:
+
+```json
+{
+  "passed": true,
+  "test": "agent_uses_only_skill_md",
+  "service": "roboagent-guard",
+  "steps": [
+    {"step": "read_skill_md", "passed": true},
+    {"step": "read_capabilities", "passed": true},
+    {"step": "evaluate_representative_actions", "passed": true},
+    {"step": "confirm_exception_only_human_review", "passed": true}
+  ]
+}
+```
+
+### POST /v1/compose/mission-plan
+
+Runs a composability demo. A downstream autonomous mission-planner workflow composes RoboAgent Guard before each robot step, then decides whether to execute the original action, execute with constraints, execute only the recommended replacement, or execute nothing.
+
+Example:
+
+```bash
+curl --fail -X POST PUBLIC_BASE_URL/v1/compose/mission-plan
+```
+
+Example response:
+
+```json
+{
+  "service": "autonomous-mission-planner-demo",
+  "composes": {"service": "roboagent-guard", "endpoint": "POST /v1/evaluate"},
+  "passed": true,
+  "human_intervention_model": "none_for_routine_approve_modify_block_paths",
+  "mission_summary": {"steps": 5, "blocked_steps": 2, "modified_steps": 1, "constrained_steps": 1}
+}
 ```
 
 ## Recommended Agent Workflow

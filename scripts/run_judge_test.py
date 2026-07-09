@@ -46,6 +46,8 @@ def local_check() -> int:
     ]:
         assert phrase in skill.text
     assert client.get("/capabilities").status_code == 200
+    assert client.post("/v1/agent-skill-test").json()["passed"] is True
+    assert client.post("/v1/compose/mission-plan").json()["passed"] is True
     safe = scenario_request("normal_navigation", 42).model_dump(mode="json")
     safe["request_id"] = "judge-local-safe"
     safe["nonce"] = "judge-local-safe-nonce"
@@ -115,6 +117,16 @@ def live_check(base_url: str) -> int:
         )
         scenario.raise_for_status()
         assert scenario.json()["decision"] == Decision.APPROVE
+        agent_skill = request_with_retry(
+            lambda: client.post(f"{base}/v1/agent-skill-test"), "/v1/agent-skill-test"
+        )
+        agent_skill.raise_for_status()
+        assert agent_skill.json()["passed"] is True
+        composed = request_with_retry(
+            lambda: client.post(f"{base}/v1/compose/mission-plan"), "/v1/compose/mission-plan"
+        )
+        composed.raise_for_status()
+        assert composed.json()["passed"] is True
     print("live judge test passed")
     return 0
 

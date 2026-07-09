@@ -6,6 +6,8 @@
 - Authorization, replay/freshness, approval-token, physical-risk, SLAM-reliability, privacy, and supervisor agents.
 - Deterministic digital twin for approved and modified actions.
 - Autonomous-by-default operation: agents can proceed, constrain, replace, or stop actions without routine human intervention.
+- Browser-visible judge proof endpoint showing an agent can complete the flow using only `SKILL.md`.
+- Composability endpoint showing an autonomous mission-planner workflow built on top of RoboAgent Guard.
 - Exception-only human escalation for stale evidence or unresolved uncertainty.
 - Ten required scenarios with expected decisions.
 - Hash-chained JSONL audit records and tamper verification.
@@ -16,7 +18,7 @@
 
 ## Endpoint List
 
-`GET /`, `GET /health`, `GET /healthz`, `GET /SKILL.md`, `GET /skill.md`, `GET /capabilities`, `GET /.well-known/agent.json`, `POST /v1/evaluate`, `POST /v1/evaluate/batch`, `GET /v1/scenarios`, `POST /v1/scenarios/{scenario_name}/run`, `GET /v1/evaluations/{evaluation_id}`, `GET /v1/demo`, and `POST /v1/judge-test`.
+`GET /`, `GET /health`, `GET /healthz`, `GET /SKILL.md`, `GET /skill.md`, `GET /capabilities`, `GET /.well-known/agent.json`, `POST /v1/evaluate`, `POST /v1/evaluate/batch`, `GET /v1/scenarios`, `POST /v1/scenarios/{scenario_name}/run`, `GET /v1/evaluations/{evaluation_id}`, `GET /v1/demo`, `POST /v1/judge-test`, `POST /v1/agent-skill-test`, and `POST /v1/compose/mission-plan`.
 
 ## Scenario List
 

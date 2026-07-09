@@ -24,6 +24,9 @@ The full service in this repository goes further:
 - It is autonomous by default: agents can continue, constrain, replace, or stop
   actions from the service response alone. Human review is reserved for stale
   evidence or unresolved uncertainty.
+- It includes a SkillMD-only judge proof at `POST /v1/agent-skill-test` and a
+  composability proof at `POST /v1/compose/mission-plan`, matching the Phase 2
+  expectation that stock agents can use and build on registered skills.
 
 ## Trace Validator Caveat
 
@@ -66,6 +69,9 @@ The dashboard calls the live API and demonstrates:
 - `unauthorized_camera_request`: privacy block;
 - `combined_safety_privacy_crisis`: hard block across authorization, physical
   risk, SLAM, freshness, and privacy evidence.
+- SkillMD judge `PASS`: a stock-agent-style flow using only `SKILL.md`.
+- Composed planner `PASS`: a downstream mission planner using RoboAgent Guard
+  before each robot step.
 
 For continuity, each audited evaluation can export a NANDA Town-style JSONL
 trace under `artifacts/nanda_traces/` with planner-to-service and

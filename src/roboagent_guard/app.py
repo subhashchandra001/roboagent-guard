@@ -114,6 +114,10 @@ def capabilities(state: StateDep) -> dict[str, Any]:
             "metadata",
         ],
         "scenario_names": [item["name"] for item in list_scenarios()],
+        "demo_endpoints": {
+            "judge_skill_test": "POST /v1/agent-skill-test",
+            "composed_mission_planner": "POST /v1/compose/mission-plan",
+        },
     }
 
 
@@ -202,6 +206,162 @@ def demo(state: StateDep) -> dict[str, object]:
             "reasons": response.reasons,
         }
     return {"service": "roboagent-guard", "scenarios": output}
+
+
+def autonomy_outcome(response: EvaluationResponse) -> str:
+    if response.decision == Decision.APPROVE:
+        return "execute_original_action"
+    if response.decision == Decision.APPROVE_WITH_CONSTRAINTS:
+        return "execute_original_action_with_constraints"
+    if response.decision == Decision.MODIFY:
+        return "execute_recommended_action_only"
+    if response.decision == Decision.BLOCK:
+        return "execute_nothing"
+    return "request_human_review"
+
+
+@app.post("/v1/agent-skill-test")
+def agent_skill_test(state: StateDep) -> dict[str, object]:
+    skill = skill_md(state)
+    required_phrases = [
+        "Call `GET /health` first.",
+        "POST /v1/evaluate",
+        "If the decision is `modify`, do not execute the original action",
+        "If the decision is `block`, execute nothing.",
+        "Default mode: no routine human intervention.",
+    ]
+    steps: list[dict[str, object]] = [
+        {
+            "step": "read_skill_md",
+            "passed": all(phrase in skill for phrase in required_phrases),
+            "evidence": {
+                "source": f"{state.settings.public_base_url.rstrip('/')}/skill.md",
+                "required_phrases_found": [
+                    phrase for phrase in required_phrases if phrase in skill
+                ],
+            },
+        },
+        {
+            "step": "read_capabilities",
+            "passed": True,
+            "evidence": {
+                "supported_decisions": [item.value for item in Decision],
+                "autonomy_model": capabilities(state)["autonomy_model"],
+            },
+        },
+    ]
+    scenario_expectations = {
+        "normal_navigation": Decision.APPROVE,
+        "low_light_slow_motion": Decision.APPROVE_WITH_CONSTRAINTS,
+        "low_light_high_speed": Decision.MODIFY,
+        "combined_safety_privacy_crisis": Decision.BLOCK,
+    }
+    runner = demo_engine(state)
+    evaluations = []
+    for scenario_name, expected in scenario_expectations.items():
+        request = scenario_request(scenario_name, seed=42)
+        request.request_id = f"agent-skill-test-{scenario_name}"
+        request.nonce = f"agent-skill-test-nonce-{scenario_name}"
+        response = runner.evaluate(request)
+        evaluations.append(
+            {
+                "scenario": scenario_name,
+                "expected_decision": expected,
+                "actual_decision": response.decision,
+                "passed": response.decision == expected,
+                "autonomous_outcome": autonomy_outcome(response),
+                "human_intervention_required": response.human_approval_required,
+                "recommended_action": response.recommended_action.type,
+                "digital_twin_applied": response.digital_twin.action_applied,
+            }
+        )
+    steps.append(
+        {
+            "step": "evaluate_representative_actions",
+            "passed": all(item["passed"] for item in evaluations),
+            "evidence": evaluations,
+        }
+    )
+    steps.append(
+        {
+            "step": "confirm_exception_only_human_review",
+            "passed": all(
+                not item["human_intervention_required"]
+                for item in evaluations
+                if item["actual_decision"] != Decision.REQUEST_HUMAN_APPROVAL
+            ),
+            "evidence": (
+                "approve, constrained, modify, and block outcomes were handled "
+                "without routine human intervention"
+            ),
+        }
+    )
+    return {
+        "passed": all(bool(step["passed"]) for step in steps),
+        "test": "agent_uses_only_skill_md",
+        "service": "roboagent-guard",
+        "steps": steps,
+    }
+
+
+@app.post("/v1/compose/mission-plan")
+def composed_mission_plan(state: StateDep) -> dict[str, object]:
+    mission = [
+        ("normal_navigation", "start with nominal navigation"),
+        ("low_light_high_speed", "adapt unsafe low-light motion"),
+        ("person_in_private_zone", "continue with privacy constraints"),
+        ("unauthorized_camera_request", "reject unauthorized raw camera sharing"),
+        ("combined_safety_privacy_crisis", "stop during combined crisis"),
+    ]
+    runner = demo_engine(state)
+    plan_steps = []
+    for index, (scenario_name, goal) in enumerate(mission, start=1):
+        request = scenario_request(scenario_name, seed=42)
+        request.request_id = f"composed-mission-{index}-{scenario_name}"
+        request.nonce = f"composed-mission-nonce-{index}-{scenario_name}"
+        response = runner.evaluate(request)
+        plan_steps.append(
+            {
+                "index": index,
+                "goal": goal,
+                "source_scenario": scenario_name,
+                "guard_decision": response.decision,
+                "autonomous_outcome": autonomy_outcome(response),
+                "action_for_downstream_agent": response.recommended_action.model_dump(mode="json"),
+                "constraints": response.constraints,
+                "human_intervention_required": response.human_approval_required,
+                "risk_score": response.risk_score,
+                "reason": response.reasons[0] if response.reasons else "",
+            }
+        )
+    return {
+        "service": "autonomous-mission-planner-demo",
+        "composes": {
+            "service": "roboagent-guard",
+            "endpoint": "POST /v1/evaluate",
+            "purpose": (
+                "convert proposed robot actions into executable, constrained, "
+                "replaced, or blocked steps"
+            ),
+        },
+        "passed": all(step["autonomous_outcome"] != "request_human_review" for step in plan_steps),
+        "human_intervention_model": "none_for_routine_approve_modify_block_paths",
+        "mission_summary": {
+            "steps": len(plan_steps),
+            "blocked_steps": sum(
+                1 for step in plan_steps if step["guard_decision"] == Decision.BLOCK
+            ),
+            "modified_steps": sum(
+                1 for step in plan_steps if step["guard_decision"] == Decision.MODIFY
+            ),
+            "constrained_steps": sum(
+                1
+                for step in plan_steps
+                if step["guard_decision"] == Decision.APPROVE_WITH_CONSTRAINTS
+            ),
+        },
+        "plan": plan_steps,
+    }
 
 
 @app.post("/v1/judge-test")

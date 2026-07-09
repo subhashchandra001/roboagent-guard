@@ -16,5 +16,8 @@ Required endpoints:
 - `GET /v1/evaluations/{evaluation_id}`
 - `GET /v1/demo`
 - `POST /v1/judge-test`
+- `POST /v1/agent-skill-test`
+- `POST /v1/compose/mission-plan`
 
 The public workflow is intentionally small: health check, read skill, evaluate action.
+The two extra demo endpoints prove the judge path and composability path without requiring a second deployment.

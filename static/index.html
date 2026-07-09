@@ -988,6 +988,71 @@
         line-height: 1.5;
       }
 
+      .evidence-layout {
+        margin-top: 22px;
+      }
+
+      .evidence-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 18px;
+        background:
+          linear-gradient(150deg, rgba(80, 242, 194, 0.075), rgba(102, 166, 255, 0.045)),
+          var(--panel);
+      }
+
+      .evidence-card p {
+        color: var(--muted);
+      }
+
+      .status-word {
+        font-size: 38px;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      .status-word.pass {
+        color: var(--ok);
+        text-shadow: 0 0 24px rgba(100, 245, 141, 0.42);
+      }
+
+      .status-word.wait {
+        color: var(--muted);
+      }
+
+      .step-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .step-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .step-row i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--muted);
+      }
+
+      .step-row.pass i {
+        background: var(--ok);
+        box-shadow: 0 0 16px rgba(100, 245, 141, 0.62);
+      }
+
+      .step-row strong {
+        overflow-wrap: anywhere;
+      }
+
       .muted {
         color: var(--muted);
       }
@@ -1268,6 +1333,38 @@
           <pre id="jsonOutput">{}</pre>
         </main>
       </section>
+
+      <section class="layout evidence-layout">
+        <div class="evidence-card">
+          <div class="section-title">
+            <h2>SkillMD Judge Test</h2>
+            <span class="pill">agent uses only /skill.md</span>
+          </div>
+          <div class="status-word wait" id="agentTestStatus">Ready</div>
+          <p>
+            Runs the same style of check a judge cares about: read SkillMD, discover
+            capabilities, evaluate safe/constrained/modified/blocked actions, and
+            confirm routine outcomes need no human intervention.
+          </p>
+          <button class="button" id="runAgentTest">Run judge pass test</button>
+          <div class="step-list" id="agentTestSteps"></div>
+        </div>
+
+        <div class="evidence-card">
+          <div class="section-title">
+            <h2>Composability Demo</h2>
+            <span class="pill">mission planner -> guard</span>
+          </div>
+          <div class="status-word wait" id="composeStatus">Ready</div>
+          <p>
+            A downstream autonomous mission planner composes RoboAgent Guard before
+            each robot step, then executes, constrains, replaces, or skips actions
+            from the guard response.
+          </p>
+          <button class="button secondary" id="runCompose">Run composed planner</button>
+          <div class="step-list" id="composeSteps"></div>
+        </div>
+      </section>
     </div>
 
     <script>
@@ -1435,6 +1532,56 @@
         }
       }
 
+      function renderStepRows(containerId, rows) {
+        $(containerId).innerHTML = rows
+          .map(
+            (row) => `
+              <div class="step-row ${row.passed === false ? "" : "pass"}">
+                <i aria-hidden="true"></i>
+                <strong>${escapeHtml(row.label)}</strong>
+                <span class="pill">${escapeHtml(row.value)}</span>
+              </div>
+            `,
+          )
+          .join("");
+      }
+
+      async function runAgentSkillTest() {
+        $("agentTestStatus").textContent = "Running";
+        $("agentTestStatus").className = "status-word wait";
+        const result = await api("/v1/agent-skill-test", { method: "POST" });
+        $("agentTestStatus").textContent = result.passed ? "PASS" : "CHECK";
+        $("agentTestStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
+        renderStepRows(
+          "agentTestSteps",
+          (result.steps || []).map((step) => ({
+            passed: step.passed,
+            label: String(step.step || "").replaceAll("_", " "),
+            value: step.passed ? "pass" : "review",
+          })),
+        );
+        state.lastResult = result;
+        $("jsonOutput").textContent = pretty(result);
+      }
+
+      async function runComposedPlanner() {
+        $("composeStatus").textContent = "Running";
+        $("composeStatus").className = "status-word wait";
+        const result = await api("/v1/compose/mission-plan", { method: "POST" });
+        $("composeStatus").textContent = result.passed ? "PASS" : "CHECK";
+        $("composeStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
+        renderStepRows(
+          "composeSteps",
+          (result.plan || []).map((step) => ({
+            passed: step.autonomous_outcome !== "request_human_review",
+            label: `${step.index}. ${step.source_scenario}`,
+            value: step.autonomous_outcome,
+          })),
+        );
+        state.lastResult = result;
+        $("jsonOutput").textContent = pretty(result);
+      }
+
       $("scenarioSelect").addEventListener("change", (event) => {
         state.selected = event.target.value;
         renderScenarios();
@@ -1443,6 +1590,8 @@
       $("runSafe").addEventListener("click", () => runScenario("normal_navigation"));
       $("runCrisis").addEventListener("click", () => runScenario("combined_safety_privacy_crisis"));
       $("runAll").addEventListener("click", runDemo);
+      $("runAgentTest").addEventListener("click", runAgentSkillTest);
+      $("runCompose").addEventListener("click", runComposedPlanner);
       $("copyResult").addEventListener("click", async () => {
         await navigator.clipboard.writeText($("jsonOutput").textContent);
         $("copyResult").textContent = "Copied";

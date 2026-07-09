@@ -43,6 +43,10 @@ def test_discovery_exposes_autonomy_model(client):
     assert capabilities["autonomy_model"]["default"] == "agent_autonomous"
     assert capabilities["autonomy_model"]["human_intervention"] == "exception_only"
     assert agent_card["autonomy_model"] == capabilities["autonomy_model"]
+    assert capabilities["demo_endpoints"]["judge_skill_test"] == "POST /v1/agent-skill-test"
+    assert agent_card["demo_endpoints"]["composed_mission_planner"]["path"] == (
+        "/v1/compose/mission-plan"
+    )
 
 
 def test_root_head(client):
@@ -200,3 +204,46 @@ def test_judge_endpoint_is_repeatable(client):
     assert second.status_code == 200
     assert first.json()["passed"] is True
     assert second.json()["passed"] is True
+
+
+def test_agent_skill_test_proves_skill_only_flow(client):
+    response = client.post("/v1/agent-skill-test")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["passed"] is True
+    assert body["test"] == "agent_uses_only_skill_md"
+    assert [step["step"] for step in body["steps"]] == [
+        "read_skill_md",
+        "read_capabilities",
+        "evaluate_representative_actions",
+        "confirm_exception_only_human_review",
+    ]
+    evaluations = body["steps"][2]["evidence"]
+    assert [item["actual_decision"] for item in evaluations] == [
+        Decision.APPROVE,
+        Decision.APPROVE_WITH_CONSTRAINTS,
+        Decision.MODIFY,
+        Decision.BLOCK,
+    ]
+
+
+def test_composed_mission_plan_uses_guard_without_routine_human_intervention(client):
+    response = client.post("/v1/compose/mission-plan")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["passed"] is True
+    assert body["composes"]["endpoint"] == "POST /v1/evaluate"
+    assert body["mission_summary"] == {
+        "steps": 5,
+        "blocked_steps": 2,
+        "modified_steps": 1,
+        "constrained_steps": 1,
+    }
+    assert {step["autonomous_outcome"] for step in body["plan"]} == {
+        "execute_original_action",
+        "execute_original_action_with_constraints",
+        "execute_recommended_action_only",
+        "execute_nothing",
+    }

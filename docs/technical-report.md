@@ -43,7 +43,7 @@ HTTP request
 
 Important runtime files:
 
-- `src/roboagent_guard/app.py`: FastAPI app, discovery endpoints, evaluation endpoints, scenario endpoints, demo endpoint, judge endpoint.
+- `src/roboagent_guard/app.py`: FastAPI app, discovery endpoints, evaluation endpoints, scenario endpoints, demo endpoints, judge endpoint, SkillMD proof endpoint, and composed mission-planner endpoint.
 - `src/roboagent_guard/simulator/runner.py`: orchestration engine for all guards, agents, supervisor, twin, audit, and trace export.
 - `src/roboagent_guard/agents/authorization.py`: role/action authorization checks.
 - `src/roboagent_guard/agents/physical_risk.py`: obstacle, speed, surface, disturbance, and battery risk.
@@ -127,6 +127,8 @@ Scenarios and demos:
 - `POST /v1/scenarios/{scenario_name}/run?seed=42`: run a deterministic scenario.
 - `GET /v1/demo`: run the demo pack.
 - `POST /v1/judge-test`: local pass/fail sanity check for safe and unsafe examples.
+- `POST /v1/agent-skill-test`: judge-style proof that an unfamiliar agent can use `SKILL.md` alone.
+- `POST /v1/compose/mission-plan`: composability proof where a downstream mission-planner workflow uses RoboAgent Guard before each robot step.
 
 ## 7. Built-In Scenarios
 
@@ -193,6 +195,7 @@ The static UI in `static/index.html` provides:
 
 - service health and policy summary;
 - quick safe, crisis, and full-demo buttons;
+- visible PASS cards for the SkillMD judge test and composed mission-planner demo;
 - scenario selection and expected-decision display;
 - final decision, risk level, risk bars, replay status, and digital twin status;
 - component-level cards for authorization, physical risk, SLAM, privacy, and replay/freshness;

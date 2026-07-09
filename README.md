@@ -45,6 +45,8 @@ uv run python scripts/run_demo.py --scenario low_light_high_speed --seed 42
 uv run python scripts/run_demo.py --scenario unauthorized_camera_request --seed 42
 uv run python scripts/run_demo.py --scenario combined_safety_privacy_crisis --seed 42
 uv run python scripts/run_judge_test.py --local
+curl --fail -X POST http://127.0.0.1:8000/v1/agent-skill-test
+curl --fail -X POST http://127.0.0.1:8000/v1/compose/mission-plan
 ```
 
 ## Required Endpoints
@@ -63,6 +65,8 @@ uv run python scripts/run_judge_test.py --local
 - `GET /v1/evaluations/{evaluation_id}`
 - `GET /v1/demo`
 - `POST /v1/judge-test`
+- `POST /v1/agent-skill-test`
+- `POST /v1/compose/mission-plan`
 
 ## Quality Gates
 

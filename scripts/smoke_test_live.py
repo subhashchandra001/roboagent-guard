@@ -131,6 +131,21 @@ def main() -> int:
         judge_body = json_body(judge)
         assert judge_body["passed"] is True
         print("/v1/judge-test", judge_body["passed"])
+
+        skill_test = request_with_retry(
+            lambda: client.post(base + "/v1/agent-skill-test"), "/v1/agent-skill-test"
+        )
+        skill_body = json_body(skill_test)
+        assert skill_body["passed"] is True
+        print("/v1/agent-skill-test", skill_body["passed"])
+
+        composition = request_with_retry(
+            lambda: client.post(base + "/v1/compose/mission-plan"),
+            "/v1/compose/mission-plan",
+        )
+        composition_body = json_body(composition)
+        assert composition_body["passed"] is True
+        print("/v1/compose/mission-plan", composition_body["passed"])
     return 0
 
 

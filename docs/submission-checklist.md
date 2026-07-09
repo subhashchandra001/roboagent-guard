@@ -18,6 +18,8 @@ https://roboagent-guard.onrender.com
 - [x] Local tests, Ruff, Pyright, audit verification, and scenario checks pass.
 - [x] Render deployment file exists.
 - [x] Agent-facing `SKILL.md` includes endpoint descriptions, curl examples, and example responses.
+- [x] Browser-visible SkillMD judge PASS test implemented.
+- [x] Composability demo implemented as an autonomous mission-planner workflow.
 
 ## Pending Hosted Submission Work
 
@@ -121,6 +123,8 @@ GET https://roboagent-guard.onrender.com/v1/scenarios
 POST https://roboagent-guard.onrender.com/v1/scenarios/normal_navigation/run?seed=42
 GET https://roboagent-guard.onrender.com/v1/demo
 POST https://roboagent-guard.onrender.com/v1/judge-test
+POST https://roboagent-guard.onrender.com/v1/agent-skill-test
+POST https://roboagent-guard.onrender.com/v1/compose/mission-plan
 ```
 
 ## Live Verification Commands
@@ -141,6 +145,13 @@ Run live judge-style test:
 
 ```bash
 uv run python scripts/run_judge_test.py --base-url https://roboagent-guard.onrender.com
+```
+
+Run the browser-visible proof endpoints directly:
+
+```bash
+curl --fail -X POST https://roboagent-guard.onrender.com/v1/agent-skill-test
+curl --fail -X POST https://roboagent-guard.onrender.com/v1/compose/mission-plan
 ```
 
 Verify the skill file:

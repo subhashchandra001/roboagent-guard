@@ -17,6 +17,10 @@ def agent_card(base_url: str, version: str) -> dict[str, object]:
         "health_url": f"{base}/health",
         "capabilities_url": f"{base}/capabilities",
         "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
+        "demo_endpoints": {
+            "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},
+            "composed_mission_planner": {"method": "POST", "path": "/v1/compose/mission-plan"},
+        },
         "supported_decisions": [item.value for item in Decision],
         "autonomy_model": {
             "default": "agent_autonomous",
