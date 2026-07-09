@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -97,6 +98,13 @@ def capabilities(state: StateDep) -> dict[str, Any]:
             "privacy",
             "simulation_seed",
         ],
+        "optional_fields": [
+            "evaluation_time",
+            "approval",
+            "client_risk_score",
+            "safety_approved",
+            "metadata",
+        ],
         "scenario_names": [item["name"] for item in list_scenarios()],
     }
 
@@ -111,11 +119,11 @@ async def evaluate(
     request: Request,
     state: StateDep,
 ) -> EvaluationResponse:
-    payload = await request.json()
     try:
+        payload = await request.json()
         reject_image_payloads(payload)
         evaluation_request = EvaluationRequest.model_validate(payload)
-    except ValueError as exc:
+    except (JSONDecodeError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     response = engine(state).evaluate(evaluation_request)
     state.evaluations[response.evaluation_id] = response

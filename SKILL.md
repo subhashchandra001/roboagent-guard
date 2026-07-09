@@ -47,12 +47,14 @@ Required top-level JSON fields for `POST /v1/evaluate`:
 
 Optional top-level JSON fields:
 
+- `evaluation_time`
 - `approval`
 - `client_risk_score`
 - `safety_approved`
 - `metadata`
 
 Use a timezone-aware timestamp. Use a unique `request_id` and `nonce` for every production evaluation.
+If `evaluation_time` is omitted, the service treats `timestamp` as the deterministic evaluation snapshot time. To explicitly test stale evidence, provide `evaluation_time` later than `timestamp`.
 
 ## Endpoints
 
@@ -160,6 +162,7 @@ Example response:
   "supported_actions": ["navigate", "stop", "slow_down", "rotate", "relocalize", "save_map", "update_map", "share_sensor_summary", "share_raw_camera", "disable_storage", "return_to_base"],
   "supported_decisions": ["approve", "approve_with_constraints", "modify", "block", "request_human_approval"],
   "required_fields": ["request_id", "nonce", "timestamp", "caller", "action", "robot_state", "perception", "privacy", "simulation_seed"],
+  "optional_fields": ["evaluation_time", "approval", "client_risk_score", "safety_approved", "metadata"],
   "scenario_names": ["combined_safety_privacy_crisis", "hidden_low_slam_confidence", "low_light_high_speed", "low_light_slow_motion", "normal_navigation", "person_in_private_zone", "replayed_approved_action", "slam_degradation", "unauthorized_camera_request", "uneven_surface_high_blur"]
 }
 ```
@@ -199,7 +202,7 @@ Example:
 ```bash
 curl --fail -X POST PUBLIC_BASE_URL/v1/evaluate \
   -H 'Content-Type: application/json' \
-  --data '{"request_id":"safe-001","nonce":"safe-nonce-001","timestamp":"2026-07-04T16:00:00Z","caller":{"id":"planner-01","role":"planner","authorized_actions":["navigate","stop","relocalize"]},"action":{"type":"navigate","linear_speed_mps":0.15,"angular_speed_rps":0.0,"target":{"x":1.0,"y":0.0},"save_map":false,"share_raw_camera":false,"store_sensor_data":false,"recipient_id":null},"robot_state":{"battery_percent":80.0,"emergency_stop_available":true,"nearest_obstacle_m":2.0,"surface":"smooth","pitch_disturbance_deg":1.0,"roll_disturbance_deg":1.0},"perception":{"illumination_lux":150.0,"blur_score":0.1,"slam_inlier_ratio":0.9,"localization_confidence":0.95,"map_entropy":0.1,"sensor_age_ms":100},"privacy":{"person_detected":false,"private_zone":false,"face_data_present":false,"privacy_filter_applied":false,"recipient_authorized":false,"retention_seconds":0},"approval":{"token":null},"simulation_seed":42}'
+  --data '{"request_id":"safe-REPLACE-WITH-UNIQUE-ID","nonce":"safe-nonce-REPLACE-WITH-UNIQUE-ID","timestamp":"2026-07-04T16:00:00Z","caller":{"id":"planner-01","role":"planner","authorized_actions":["navigate","stop","relocalize"]},"action":{"type":"navigate","linear_speed_mps":0.15,"angular_speed_rps":0.0,"target":{"x":1.0,"y":0.0},"save_map":false,"share_raw_camera":false,"store_sensor_data":false,"recipient_id":null},"robot_state":{"battery_percent":80.0,"emergency_stop_available":true,"nearest_obstacle_m":2.0,"surface":"smooth","pitch_disturbance_deg":1.0,"roll_disturbance_deg":1.0},"perception":{"illumination_lux":150.0,"blur_score":0.1,"slam_inlier_ratio":0.9,"localization_confidence":0.95,"map_entropy":0.1,"sensor_age_ms":100},"privacy":{"person_detected":false,"private_zone":false,"face_data_present":false,"privacy_filter_applied":false,"recipient_authorized":false,"retention_seconds":0},"approval":{"token":null},"simulation_seed":42}'
 ```
 
 Example response:
@@ -207,7 +210,7 @@ Example response:
 ```json
 {
   "evaluation_id": "eval-30a74d1160b5",
-  "request_id": "safe-001",
+  "request_id": "safe-REPLACE-WITH-UNIQUE-ID",
   "decision": "approve",
   "risk_level": "low",
   "risk_score": 0.045,
@@ -234,7 +237,7 @@ Example:
 ```bash
 curl --fail -X POST PUBLIC_BASE_URL/v1/evaluate/batch \
   -H 'Content-Type: application/json' \
-  --data '{"requests":[{"request_id":"batch-safe-001","nonce":"batch-safe-nonce-001","timestamp":"2026-07-04T16:00:00Z","caller":{"id":"planner-01","role":"planner","authorized_actions":["navigate","stop","relocalize"]},"action":{"type":"navigate","linear_speed_mps":0.15,"angular_speed_rps":0.0,"target":{"x":1.0,"y":0.0},"save_map":false,"share_raw_camera":false,"store_sensor_data":false,"recipient_id":null},"robot_state":{"battery_percent":80.0,"emergency_stop_available":true,"nearest_obstacle_m":2.0,"surface":"smooth","pitch_disturbance_deg":1.0,"roll_disturbance_deg":1.0},"perception":{"illumination_lux":150.0,"blur_score":0.1,"slam_inlier_ratio":0.9,"localization_confidence":0.95,"map_entropy":0.1,"sensor_age_ms":100},"privacy":{"person_detected":false,"private_zone":false,"face_data_present":false,"privacy_filter_applied":false,"recipient_authorized":false,"retention_seconds":0},"approval":{"token":null},"simulation_seed":42}]}'
+  --data '{"requests":[{"request_id":"batch-safe-REPLACE-WITH-UNIQUE-ID","nonce":"batch-safe-nonce-REPLACE-WITH-UNIQUE-ID","timestamp":"2026-07-04T16:00:00Z","caller":{"id":"planner-01","role":"planner","authorized_actions":["navigate","stop","relocalize"]},"action":{"type":"navigate","linear_speed_mps":0.15,"angular_speed_rps":0.0,"target":{"x":1.0,"y":0.0},"save_map":false,"share_raw_camera":false,"store_sensor_data":false,"recipient_id":null},"robot_state":{"battery_percent":80.0,"emergency_stop_available":true,"nearest_obstacle_m":2.0,"surface":"smooth","pitch_disturbance_deg":1.0,"roll_disturbance_deg":1.0},"perception":{"illumination_lux":150.0,"blur_score":0.1,"slam_inlier_ratio":0.9,"localization_confidence":0.95,"map_entropy":0.1,"sensor_age_ms":100},"privacy":{"person_detected":false,"private_zone":false,"face_data_present":false,"privacy_filter_applied":false,"recipient_authorized":false,"retention_seconds":0},"approval":{"token":null},"simulation_seed":42}]}'
 ```
 
 Example response:
@@ -243,7 +246,7 @@ Example response:
 {
   "results": [
     {
-      "request_id": "batch-safe-001",
+      "request_id": "batch-safe-REPLACE-WITH-UNIQUE-ID",
       "decision": "approve",
       "risk_level": "low",
       "recommended_action": {"type": "navigate", "linear_speed_mps": 0.15}

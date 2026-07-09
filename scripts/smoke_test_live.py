@@ -4,6 +4,7 @@ import argparse
 from collections.abc import Callable
 from time import sleep
 from typing import Any
+from uuid import uuid4
 
 import httpx
 
@@ -48,11 +49,20 @@ def json_body(response: httpx.Response) -> Any:
     return response.json()
 
 
+def unique_safe_request(run_id: str, label: str) -> dict[str, Any]:
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json", exclude_none=True)
+    request["request_id"] = f"{label}-{run_id}"
+    request["nonce"] = f"{label}-nonce-{run_id}"
+    request["action"]["target"]["x"] = 1.0 + (int(run_id[:6], 16) % 1000) / 1_000_000
+    return request
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", required=True)
     args = parser.parse_args()
     base = args.base_url.rstrip("/")
+    run_id = uuid4().hex[:12]
     with httpx.Client(timeout=75.0) as client:
         for path in [
             "/",
@@ -73,25 +83,29 @@ def main() -> int:
         scenarios = request_with_retry(lambda: client.get(base + "/v1/scenarios"), "/v1/scenarios")
         assert len(json_body(scenarios)) >= len(SCENARIOS)
 
-        request = scenario_request("normal_navigation", 42).model_dump(mode="json")
-        request["request_id"] = "live-smoke-safe"
-        request["nonce"] = "live-smoke-safe-nonce"
+        request = unique_safe_request(run_id, "live-smoke-safe")
         response = request_with_retry(
             lambda: client.post(base + "/v1/evaluate", json=request), "/v1/evaluate"
         )
-        print("/v1/evaluate", json_body(response)["decision"])
+        decision = json_body(response)["decision"]
+        assert decision == "approve", f"/v1/evaluate expected approve, got {decision}"
+        print("/v1/evaluate", decision)
 
-        batch_first = scenario_request("normal_navigation", 42).model_dump(mode="json")
-        batch_second = scenario_request("unauthorized_camera_request", 42).model_dump(mode="json")
-        batch_first["request_id"], batch_first["nonce"] = "live-batch-1", "live-batch-nonce-1"
-        batch_second["request_id"], batch_second["nonce"] = "live-batch-2", "live-batch-nonce-2"
+        batch_first = unique_safe_request(run_id, "live-batch-1")
+        batch_second = scenario_request("unauthorized_camera_request", 42).model_dump(
+            mode="json", exclude_none=True
+        )
+        batch_second["request_id"] = f"live-batch-2-{run_id}"
+        batch_second["nonce"] = f"live-batch-nonce-2-{run_id}"
         batch = request_with_retry(
             lambda: client.post(
                 base + "/v1/evaluate/batch", json={"requests": [batch_first, batch_second]}
             ),
             "/v1/evaluate/batch",
         )
-        print("/v1/evaluate/batch", [item["decision"] for item in json_body(batch)["results"]])
+        batch_decisions = [item["decision"] for item in json_body(batch)["results"]]
+        assert batch_decisions == ["approve", "block"], batch_decisions
+        print("/v1/evaluate/batch", batch_decisions)
 
         for name, expected in SCENARIOS.items():
             path = f"/v1/scenarios/{name}/run"

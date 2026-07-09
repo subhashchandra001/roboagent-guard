@@ -40,3 +40,14 @@ def test_skill_only_workflow(client):
     response = client.post("/v1/evaluate", json=request)
     assert response.status_code == 200
     assert response.json()["decision"] == "approve"
+
+
+def test_api_client_uses_isolated_audit_path(client, tmp_path):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "isolated-audit"
+    request["nonce"] = "isolated-audit-nonce"
+
+    response = client.post("/v1/evaluate", json=request)
+
+    assert response.status_code == 200
+    assert (tmp_path / "audit.jsonl").exists()

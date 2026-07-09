@@ -62,6 +62,7 @@ class EvaluationRequest(StrictBaseModel):
     request_id: str = Field(min_length=1, max_length=120)
     nonce: str = Field(min_length=1, max_length=120)
     timestamp: datetime
+    evaluation_time: datetime | None = None
     caller: Caller
     action: Action
     robot_state: RobotState
@@ -84,6 +85,13 @@ class EvaluationRequest(StrictBaseModel):
     def timestamp_must_be_timezone_aware(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
             raise ValueError("timestamp must include timezone")
+        return value
+
+    @field_validator("evaluation_time")
+    @classmethod
+    def evaluation_time_must_be_timezone_aware(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            raise ValueError("evaluation_time must include timezone")
         return value
 
 

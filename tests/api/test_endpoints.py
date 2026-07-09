@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from roboagent_guard.models.decisions import Decision
@@ -47,6 +49,43 @@ def test_evaluate_safe(client):
     body = response.json()
     assert body["decision"] == Decision.APPROVE
     assert body["trace_hash"]
+
+
+def test_evaluate_accepts_current_snapshot_time(client):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "api-current-time"
+    request["nonce"] = "api-current-time-nonce"
+    request["timestamp"] = datetime.now(UTC).isoformat()
+
+    response = client.post("/v1/evaluate", json=request)
+
+    assert response.status_code == 200
+    assert response.json()["decision"] == Decision.APPROVE
+    assert response.json()["freshness_passed"] is True
+
+
+def test_evaluate_rejects_stale_timestamp_when_evaluation_time_is_injected(client):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "api-stale-eval-time"
+    request["nonce"] = "api-stale-eval-time-nonce"
+    timestamp = datetime(2026, 7, 4, 16, 0, tzinfo=UTC)
+    request["timestamp"] = timestamp.isoformat()
+    request["evaluation_time"] = (timestamp + timedelta(minutes=10)).isoformat()
+
+    response = client.post("/v1/evaluate", json=request)
+
+    assert response.status_code == 200
+    assert response.json()["decision"] == Decision.REQUEST_HUMAN_APPROVAL
+    assert response.json()["freshness_passed"] is False
+    assert "STALE_TIMESTAMP" in response.json()["violation_codes"]
+
+
+def test_evaluate_rejects_malformed_json(client):
+    response = client.post(
+        "/v1/evaluate", content="{bad json", headers={"content-type": "application/json"}
+    )
+
+    assert response.status_code == 422
 
 
 def test_evaluate_batch(client):

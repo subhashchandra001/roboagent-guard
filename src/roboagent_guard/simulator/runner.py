@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from roboagent_guard.agents.authorization import AuthorizationAgent
 from roboagent_guard.agents.physical_risk import PhysicalRiskAgent
 from roboagent_guard.agents.privacy import PrivacyAgent
@@ -43,7 +41,7 @@ class EvaluationEngine:
 
     def evaluate(self, request: EvaluationRequest, audit: bool = True) -> EvaluationResponse:
         replay = self.replay_guard.check(request)
-        freshness = FreshnessGuard(now=datetime(2026, 7, 4, 16, 0, tzinfo=UTC)).check(request)
+        freshness = FreshnessGuard(now=request.evaluation_time or request.timestamp).check(request)
         token = self.token_store.consume_if_present(request.approval.token)
         components = {
             "authorization": self.authorization.evaluate(request),

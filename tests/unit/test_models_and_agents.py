@@ -9,7 +9,7 @@ from roboagent_guard.agents.authorization import AuthorizationAgent
 from roboagent_guard.agents.physical_risk import PhysicalRiskAgent
 from roboagent_guard.agents.privacy import PrivacyAgent
 from roboagent_guard.agents.slam_reliability import SlamReliabilityAgent
-from roboagent_guard.models.decisions import Decision
+from roboagent_guard.models.decisions import ActionType, CallerRole, Decision
 from roboagent_guard.simulator.scenarios import scenario_request
 
 
@@ -76,3 +76,42 @@ def test_modified_action_applies_replacement(engine):
     assert response.decision == Decision.MODIFY
     assert response.recommended_action.type == "relocalize"
     assert response.digital_twin.resulting_state["localization_mode"] == "relocalized"
+
+
+@pytest.mark.parametrize(
+    ("action_type", "role", "authorized_actions", "field", "expected"),
+    [
+        (ActionType.ROTATE, CallerRole.PLANNER, [ActionType.ROTATE], "heading_rad", 0.5),
+        (
+            ActionType.UPDATE_MAP,
+            CallerRole.MAPPING_AGENT,
+            [ActionType.UPDATE_MAP],
+            "map_update_count",
+            1,
+        ),
+        (
+            ActionType.SHARE_SENSOR_SUMMARY,
+            CallerRole.PRIVACY_AGENT,
+            [ActionType.SHARE_SENSOR_SUMMARY],
+            "sensor_summary_shared",
+            True,
+        ),
+    ],
+)
+def test_advertised_actions_have_twin_effect(
+    engine, action_type, role, authorized_actions, field, expected
+):
+    req = scenario_request("normal_navigation", 42)
+    req.request_id = f"action-{action_type}"
+    req.nonce = f"action-{action_type}-nonce"
+    req.caller.role = role
+    req.caller.authorized_actions = authorized_actions
+    req.action.type = action_type
+    req.action.linear_speed_mps = 0.0
+    req.action.angular_speed_rps = 0.5
+
+    response = engine.evaluate(req, audit=False)
+
+    assert response.decision == Decision.APPROVE
+    assert response.digital_twin.action_applied is True
+    assert response.digital_twin.resulting_state[field] == expected

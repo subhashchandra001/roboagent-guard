@@ -16,10 +16,15 @@ from roboagent_guard.simulator.scenarios import scenario_request
 
 @pytest.fixture
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setenv("AUDIT_PATH", str(tmp_path / "audit.jsonl"))
+    settings = Settings.model_validate(
+        {"AUDIT_PATH": tmp_path / "audit.jsonl", "NANDA_TRACE_DIR": tmp_path / "nanda"}
+    )
+    monkeypatch.setenv("AUDIT_PATH", str(settings.audit_path))
+    app_state.settings = settings
     app_state.replay_guard = ReplayGuard()
     app_state.token_store = ApprovalTokenStore()
     app_state.evaluations = {}
+    app_state._audit_store = None
     return TestClient(app)
 
 

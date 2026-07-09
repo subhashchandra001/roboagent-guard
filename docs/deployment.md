@@ -11,7 +11,7 @@ pip install uv && uv sync --frozen --no-dev
 Start command:
 
 ```bash
-uv run uvicorn roboagent_guard.app:app --host 0.0.0.0 --port $PORT
+uv run --no-sync uvicorn roboagent_guard.app:app --host 0.0.0.0 --port $PORT
 ```
 
 Set `PUBLIC_BASE_URL` to the final HTTPS service URL, `POLICY_VERSION=1.0.0`, and `AUDIT_PATH=/tmp/roboagent-guard-audit.jsonl`.
@@ -19,15 +19,15 @@ Set `PUBLIC_BASE_URL` to the final HTTPS service URL, `POLICY_VERSION=1.0.0`, an
 After deployment:
 
 ```bash
-uv run python scripts/smoke_test_live.py --base-url https://YOUR-SERVICE.onrender.com
-uv run python scripts/run_judge_test.py --base-url https://YOUR-SERVICE.onrender.com
+uv run python scripts/smoke_test_live.py --base-url https://roboagent-guard.onrender.com
+uv run python scripts/run_judge_test.py --base-url https://roboagent-guard.onrender.com
 ```
 
 Also confirm both skill URLs work:
 
 ```bash
-curl --fail https://YOUR-SERVICE.onrender.com/SKILL.md
-curl --fail https://YOUR-SERVICE.onrender.com/skill.md
+curl --fail https://roboagent-guard.onrender.com/SKILL.md
+curl --fail https://roboagent-guard.onrender.com/skill.md
 ```
 
 For the full NandaHack Phase 2 submission checklist, see `docs/submission-checklist.md`.

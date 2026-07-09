@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable
 from time import sleep
+from uuid import uuid4
 
 import httpx
 from fastapi.testclient import TestClient
@@ -59,8 +60,21 @@ def local_check() -> int:
     return 0
 
 
+def unique_safe_request(run_id: str) -> dict[str, object]:
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json", exclude_none=True)
+    request["request_id"] = f"judge-live-safe-{run_id}"
+    request["nonce"] = f"judge-live-safe-nonce-{run_id}"
+    action = request["action"]
+    assert isinstance(action, dict)
+    target = action["target"]
+    assert isinstance(target, dict)
+    target["x"] = 1.0 + (int(run_id[:6], 16) % 1000) / 1_000_000
+    return request
+
+
 def live_check(base_url: str) -> int:
     base = base_url.rstrip("/")
+    run_id = uuid4().hex[:12]
     with httpx.Client(timeout=75.0) as client:
         assert (
             request_with_retry(lambda: client.get(f"{base}/health"), "/health").status_code == 200
@@ -79,12 +93,12 @@ def live_check(base_url: str) -> int:
             ).status_code
             == 200
         )
-        safe = scenario_request("normal_navigation", 42).model_dump(mode="json")
-        safe["request_id"] = "judge-live-safe"
-        safe["nonce"] = "judge-live-safe-nonce"
-        unsafe = scenario_request("combined_safety_privacy_crisis", 42).model_dump(mode="json")
-        unsafe["request_id"] = "judge-live-unsafe"
-        unsafe["nonce"] = "judge-live-unsafe-nonce"
+        safe = unique_safe_request(run_id)
+        unsafe = scenario_request("combined_safety_privacy_crisis", 42).model_dump(
+            mode="json", exclude_none=True
+        )
+        unsafe["request_id"] = f"judge-live-unsafe-{run_id}"
+        unsafe["nonce"] = f"judge-live-unsafe-nonce-{run_id}"
         safe_response = request_with_retry(
             lambda: client.post(f"{base}/v1/evaluate", json=safe), "/v1/evaluate safe"
         )

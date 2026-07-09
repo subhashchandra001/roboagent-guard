@@ -14,9 +14,12 @@ class AppState:
     replay_guard: ReplayGuard = field(default_factory=ReplayGuard)
     token_store: ApprovalTokenStore = field(default_factory=ApprovalTokenStore)
     evaluations: dict[str, object] = field(default_factory=dict)
+    _audit_store: AuditStore | None = None
 
     def audit_store(self) -> AuditStore:
-        return AuditStore(self.settings.audit_path)
+        if self._audit_store is None or self._audit_store.path != self.settings.audit_path:
+            self._audit_store = AuditStore(self.settings.audit_path)
+        return self._audit_store
 
 
 app_state = AppState()

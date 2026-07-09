@@ -49,6 +49,8 @@ uv run python scripts/run_judge_test.py --local
 - `GET /`
 - `GET /health`
 - `GET /SKILL.md`
+- `GET /skill.md`
+- `GET /healthz`
 - `GET /capabilities`
 - `GET /.well-known/agent.json`
 - `POST /v1/evaluate`
@@ -83,7 +85,7 @@ pip install uv && uv sync --frozen --no-dev
 Start command:
 
 ```bash
-uv run uvicorn roboagent_guard.app:app --host 0.0.0.0 --port $PORT
+uv run --no-sync uvicorn roboagent_guard.app:app --host 0.0.0.0 --port $PORT
 ```
 
 Set:

@@ -16,6 +16,10 @@ class TwinState(StrictBaseModel):
     battery_percent: FiniteFloat = Field(ge=0.0, le=100.0)
     mapping_enabled: bool = False
     raw_storage_enabled: bool = False
+    map_update_count: int = 0
+    sensor_summary_shared: bool = False
+    raw_camera_shared: bool = False
+    last_recipient_id: str | None = None
     localization_mode: str = "tracking"
     person_detected: bool = False
     private_zone: bool = False

@@ -41,6 +41,18 @@ class DigitalTwin:
             next_state.raw_storage_enabled = False
         elif action.type == ActionType.SAVE_MAP:
             next_state.mapping_enabled = True
+        elif action.type == ActionType.UPDATE_MAP:
+            next_state.mapping_enabled = True
+            next_state.map_update_count += 1
+        elif action.type == ActionType.SHARE_SENSOR_SUMMARY:
+            next_state.sensor_summary_shared = True
+            next_state.last_recipient_id = action.recipient_id
+        elif action.type == ActionType.SHARE_RAW_CAMERA:
+            next_state.raw_camera_shared = True
+            next_state.last_recipient_id = action.recipient_id
+        elif action.type == ActionType.ROTATE:
+            next_state.angular_speed_rps = action.angular_speed_rps
+            next_state.heading_rad = round(next_state.heading_rad + action.angular_speed_rps, 6)
         elif action.type == ActionType.NAVIGATE:
             speed = action.linear_speed_mps
             next_state.linear_speed_mps = speed

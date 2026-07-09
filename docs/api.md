@@ -4,7 +4,9 @@ Required endpoints:
 
 - `GET /`
 - `GET /health`
+- `GET /healthz`
 - `GET /SKILL.md`
+- `GET /skill.md`
 - `GET /capabilities`
 - `GET /.well-known/agent.json`
 - `POST /v1/evaluate`

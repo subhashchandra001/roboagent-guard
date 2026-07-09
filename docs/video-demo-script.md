@@ -2,22 +2,22 @@
 
 Goal: record a short required Phase 2 video after the service is deployed publicly. Target length: 60 to 90 seconds.
 
-Replace `PUBLIC_URL` with the deployed service URL.
+Public service URL: `https://roboagent-guard.onrender.com`.
 
 ## Recording Setup
 
 Open these tabs before recording:
 
-- `PUBLIC_URL`
-- `PUBLIC_URL/skill.md`
-- `PUBLIC_URL/docs`
+- `https://roboagent-guard.onrender.com`
+- `https://roboagent-guard.onrender.com/skill.md`
+- `https://roboagent-guard.onrender.com/docs`
 
 Optional terminal commands:
 
 ```bash
-curl --fail PUBLIC_URL/health
-curl --fail -X POST 'PUBLIC_URL/v1/scenarios/normal_navigation/run?seed=42'
-curl --fail -X POST 'PUBLIC_URL/v1/scenarios/combined_safety_privacy_crisis/run?seed=42'
+curl --fail https://roboagent-guard.onrender.com/health
+curl --fail -X POST 'https://roboagent-guard.onrender.com/v1/scenarios/normal_navigation/run?seed=42'
+curl --fail -X POST 'https://roboagent-guard.onrender.com/v1/scenarios/combined_safety_privacy_crisis/run?seed=42'
 ```
 
 ## Suggested Narration
@@ -33,12 +33,12 @@ curl --fail -X POST 'PUBLIC_URL/v1/scenarios/combined_safety_privacy_crisis/run?
 
 ## Demo Flow
 
-1. Show the dashboard at `PUBLIC_URL`.
+1. Show the dashboard at `https://roboagent-guard.onrender.com`.
 2. Click `Run safe demo`.
 3. Click `Run crisis demo`.
 4. Click `Run full demo`.
-5. Open `PUBLIC_URL/skill.md` and show that the file contains endpoint examples and agent instructions.
-6. Open `PUBLIC_URL/docs` to show OpenAPI is available.
+5. Open `https://roboagent-guard.onrender.com/skill.md` and show that the file contains endpoint examples and agent instructions.
+6. Open `https://roboagent-guard.onrender.com/docs` to show OpenAPI is available.
 7. Optionally show terminal output from the two curl scenario calls.
 
 ## Final Video Checklist

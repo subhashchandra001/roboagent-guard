@@ -49,7 +49,7 @@ Important runtime files:
 - `src/roboagent_guard/agents/privacy.py`: raw camera, face data, private zone, storage, retention, and recipient policy.
 - `src/roboagent_guard/agents/supervisor.py`: final deterministic decision and recommended replacement action.
 - `src/roboagent_guard/security/replay_guard.py`: duplicate `request_id`, duplicate `nonce`, and blocked-action replay detection.
-- `src/roboagent_guard/security/freshness.py`: timestamp and sensor-age checks with injected deterministic time in the engine.
+- `src/roboagent_guard/security/freshness.py`: timestamp and sensor-age checks with request-injected deterministic evaluation time.
 - `src/roboagent_guard/security/input_safety.py`: rejects actual image-like payloads; camera use is represented by metadata flags only.
 - `src/roboagent_guard/simulator/digital_twin.py`: deterministic state transition using seeded random generation only.
 - `src/roboagent_guard/audit/store.py`: append-only audit records with chained hashes.
@@ -64,6 +64,7 @@ Required fields:
 - `request_id`: unique request identifier.
 - `nonce`: unique anti-replay nonce.
 - `timestamp`: timezone-aware timestamp.
+- `evaluation_time`: optional timezone-aware evaluation snapshot time for explicit freshness testing.
 - `caller`: caller id, role, and authorized action list.
 - `action`: requested robot action and metadata flags.
 - `robot_state`: battery, emergency stop, obstacle distance, surface, pitch, and roll.
@@ -86,7 +87,7 @@ Optional fields:
 2. Reject actual image-like payloads.
 3. Validate against Pydantic schemas.
 4. Check replay guard for repeated request IDs, nonces, or blocked action evidence.
-5. Check freshness against deterministic injected time.
+5. Check freshness against `evaluation_time` when supplied, otherwise against the request `timestamp` as the deterministic snapshot time.
 6. Consume approval token if present.
 7. Run authorization, physical risk, SLAM reliability, privacy, and replay/freshness components.
 8. Let the supervisor combine component outputs.
