@@ -1,6 +1,6 @@
 # RoboAgent Guard
 
-Deterministic safety and privacy gate that evaluates mobile-robot actions before a digital twin applies them.
+Deterministic safety and privacy gate that lets agents evaluate and adapt mobile-robot actions before a digital twin applies them, with human escalation only for exceptional uncertainty.
 
 ## Base URL
 
@@ -8,7 +8,16 @@ PUBLIC_BASE_URL
 
 ## What This Service Does
 
-RoboAgent Guard checks a proposed mobile-robot action for authorization, replay, freshness, physical safety, SLAM reliability, and privacy risk. It returns a deterministic decision: `approve`, `approve_with_constraints`, `modify`, `block`, or `request_human_approval`.
+RoboAgent Guard checks a proposed mobile-robot action for authorization, replay, freshness, physical safety, SLAM reliability, and privacy risk. It returns a deterministic decision: `approve`, `approve_with_constraints`, `modify`, `block`, or `request_human_approval`. The normal path is agent-autonomous: the calling agent can continue, constrain, replace, or stop the action from the response alone. Human review is an exception path for stale evidence or unresolved uncertainty.
+
+## Autonomy Model
+
+- Default mode: no routine human intervention.
+- The agent may proceed automatically on `approve`.
+- The agent may proceed automatically with returned `constraints` on `approve_with_constraints`.
+- The agent may proceed automatically with only `recommended_action` on `modify`.
+- The agent must execute nothing on `block`.
+- The agent asks a human only when `decision` is `request_human_approval` or `human_approval_required` is true.
 
 ## How The Agent Should Use This
 
@@ -19,7 +28,7 @@ RoboAgent Guard checks a proposed mobile-robot action for authorization, replay,
 5. If the decision is `approve_with_constraints`, execute the original action while honoring `constraints`.
 6. If the decision is `modify`, do not execute the original action; execute only `recommended_action`.
 7. If the decision is `block`, execute nothing.
-8. If `human_approval_required` is true, pause and escalate to a human supervisor.
+8. Ask a human only if `human_approval_required` is true or the decision is `request_human_approval`.
 9. Never retry the same `request_id` or `nonce`.
 10. Do not send images. Camera use is represented only by metadata flags such as `share_raw_camera`, `face_data_present`, and `privacy_filter_applied`.
 
@@ -29,7 +38,7 @@ RoboAgent Guard checks a proposed mobile-robot action for authorization, replay,
 - `approve_with_constraints`: execute the original action while honoring returned constraints.
 - `modify`: execute only the returned `recommended_action`.
 - `block`: execute nothing; the digital twin does not apply the action.
-- `request_human_approval`: pause execution and ask a human for review.
+- `request_human_approval`: pause execution and ask a human for review because evidence is stale or uncertainty cannot be resolved automatically.
 
 ## Evaluation Request Fields
 
@@ -60,7 +69,7 @@ If `evaluation_time` is omitted, the service treats `timestamp` as the determini
 
 ### GET /
 
-Returns the browser dashboard for humans to run demos and inspect traces.
+Returns the browser dashboard for optional demo inspection. Agents do not need this page for routine operation.
 
 Example:
 
@@ -161,6 +170,7 @@ Example response:
   "policy_version": "1.0.0",
   "supported_actions": ["navigate", "stop", "slow_down", "rotate", "relocalize", "save_map", "update_map", "share_sensor_summary", "share_raw_camera", "disable_storage", "return_to_base"],
   "supported_decisions": ["approve", "approve_with_constraints", "modify", "block", "request_human_approval"],
+  "autonomy_model": {"default": "agent_autonomous", "human_intervention": "exception_only"},
   "required_fields": ["request_id", "nonce", "timestamp", "caller", "action", "robot_state", "perception", "privacy", "simulation_seed"],
   "optional_fields": ["evaluation_time", "approval", "client_risk_score", "safety_approved", "metadata"],
   "scenario_names": ["combined_safety_privacy_crisis", "hidden_low_slam_confidence", "low_light_high_speed", "low_light_slow_motion", "normal_navigation", "person_in_private_zone", "replayed_approved_action", "slam_degradation", "unauthorized_camera_request", "uneven_surface_high_blur"]
@@ -369,7 +379,7 @@ Use this exact flow when controlling or simulating a robot action:
 5. Read `decision`, `recommended_action`, `constraints`, `reasons`, and `digital_twin.action_applied`.
 6. If `decision` is `modify`, execute only `recommended_action`.
 7. If `decision` is `block`, execute nothing.
-8. If `decision` is `request_human_approval`, ask a human supervisor before proceeding.
+8. If `decision` is `request_human_approval`, ask a human supervisor before proceeding. This is an exception path, not the normal operating path.
 
 ## Safe Test Call
 
@@ -402,4 +412,4 @@ curl --fail -X POST 'PUBLIC_BASE_URL/v1/scenarios/combined_safety_privacy_crisis
 - [ ] Unique `request_id` and `nonce` were used.
 - [ ] `modify` caused replacement with `recommended_action`.
 - [ ] `block` caused no execution.
-- [ ] `human_approval_required` caused escalation.
+- [ ] Human escalation happened only when `decision` was `request_human_approval` or `human_approval_required` was true.

@@ -36,6 +36,15 @@ def test_health_shape(client):
     assert client.get("/healthz").json() == client.get("/health").json()
 
 
+def test_discovery_exposes_autonomy_model(client):
+    capabilities = client.get("/capabilities").json()
+    agent_card = client.get("/.well-known/agent.json").json()
+
+    assert capabilities["autonomy_model"]["default"] == "agent_autonomous"
+    assert capabilities["autonomy_model"]["human_intervention"] == "exception_only"
+    assert agent_card["autonomy_model"] == capabilities["autonomy_model"]
+
+
 def test_root_head(client):
     assert client.head("/").status_code == 200
 

@@ -14,3 +14,5 @@ Decision precedence:
 10. Low risk: `approve`.
 
 Risk scores are deterministic, finite, clamped to `[0, 1]`, and never accepted from the client as authority.
+
+Autonomy rule: the agent handles `approve`, `approve_with_constraints`, `modify`, and `block` without routine human intervention. Human review is an exception path only for `request_human_approval` or `human_approval_required=true`.

@@ -8,3 +8,4 @@
 4. Sends a safe request.
 5. Sends an unsafe request.
 6. Confirms safe approval and unsafe modification or block.
+7. Confirms routine outcomes require no human intervention; escalation is only for `request_human_approval`.

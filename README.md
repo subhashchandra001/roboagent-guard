@@ -4,6 +4,8 @@
 
 RoboAgent Guard is a FastAPI service that evaluates proposed mobile-robot actions for authorization, replay/freshness, physical risk, SLAM reliability, and privacy risk. It returns `approve`, `approve_with_constraints`, `modify`, `block`, or `request_human_approval`, then simulates approved or modified actions in a deterministic digital twin.
 
+The operating model is autonomous by default. A stock agent can use `SKILL.md` to decide, constrain, replace, or stop an action without routine human help. Human intervention is reserved for exception cases such as stale evidence or unresolved uncertainty.
+
 This is the main NandaHack service submission: a hosted API plus `SKILL.md` that an unfamiliar AI agent can use without human guidance.
 
 For a complete architecture, flow, code map, endpoint, command, testing, and deployment guide, read [`docs/technical-report.md`](docs/technical-report.md).
@@ -33,6 +35,7 @@ curl --fail http://127.0.0.1:8000/capabilities
 3. `POST /v1/evaluate`
 4. Execute only the returned `recommended_action` when the decision is `modify`.
 5. Execute nothing when the decision is `block`.
+6. Ask a human only when `decision` is `request_human_approval` or `human_approval_required` is true.
 
 ## Demo
 

@@ -87,6 +87,14 @@ def capabilities(state: StateDep) -> dict[str, Any]:
         "policy_version": state.settings.policy_version,
         "supported_actions": [item.value for item in ActionType],
         "supported_decisions": [item.value for item in Decision],
+        "autonomy_model": {
+            "default": "agent_autonomous",
+            "human_intervention": "exception_only",
+            "description": (
+                "Agents can approve, constrain, modify, or block actions without human help. "
+                "Human escalation is reserved for stale evidence or unresolved uncertainty."
+            ),
+        },
         "required_fields": [
             "request_id",
             "nonce",

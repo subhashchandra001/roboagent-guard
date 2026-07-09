@@ -21,6 +21,9 @@ The full service in this repository goes further:
 - It never executes blocked actions in the twin, and `modify` applies only the
   recommended replacement action.
 - It stores hash-chained audit records and exports NANDA-style traces.
+- It is autonomous by default: agents can continue, constrain, replace, or stop
+  actions from the service response alone. Human review is reserved for stale
+  evidence or unresolved uncertainty.
 
 ## Trace Validator Caveat
 

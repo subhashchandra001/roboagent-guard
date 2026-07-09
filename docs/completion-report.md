@@ -5,6 +5,8 @@
 - Strict Pydantic 2 request and response models with finite numeric validation.
 - Authorization, replay/freshness, approval-token, physical-risk, SLAM-reliability, privacy, and supervisor agents.
 - Deterministic digital twin for approved and modified actions.
+- Autonomous-by-default operation: agents can proceed, constrain, replace, or stop actions without routine human intervention.
+- Exception-only human escalation for stale evidence or unresolved uncertainty.
 - Ten required scenarios with expected decisions.
 - Hash-chained JSONL audit records and tamper verification.
 - NANDA Town-style trace export under `artifacts/nanda_traces/`.
@@ -14,7 +16,7 @@
 
 ## Endpoint List
 
-`GET /`, `GET /health`, `GET /SKILL.md`, `GET /capabilities`, `GET /.well-known/agent.json`, `POST /v1/evaluate`, `POST /v1/evaluate/batch`, `GET /v1/scenarios`, `POST /v1/scenarios/{scenario_name}/run`, `GET /v1/evaluations/{evaluation_id}`, `GET /v1/demo`, and `POST /v1/judge-test`.
+`GET /`, `GET /health`, `GET /healthz`, `GET /SKILL.md`, `GET /skill.md`, `GET /capabilities`, `GET /.well-known/agent.json`, `POST /v1/evaluate`, `POST /v1/evaluate/batch`, `GET /v1/scenarios`, `POST /v1/scenarios/{scenario_name}/run`, `GET /v1/evaluations/{evaluation_id}`, `GET /v1/demo`, and `POST /v1/judge-test`.
 
 ## Scenario List
 
@@ -27,8 +29,8 @@
 - `uv run ruff check .`: passed.
 - `uv run ruff format --check .`: passed.
 - `uv run pyright`: passed with 0 errors.
-- `uv run pytest -q`: 75 passed, 1 third-party deprecation warning.
-- `uv run pytest --cov=roboagent_guard --cov-report=term-missing`: 75 passed, total coverage 94%.
+- `uv run pytest -q`: 94 passed, 1 third-party deprecation warning.
+- `uv run pytest --cov=roboagent_guard --cov-report=term-missing`: 94 passed, total coverage 94.56%.
 - `uv run python scripts/run_demo.py --scenario normal_navigation --seed 42`: passed, decision `approve`.
 - `uv run python scripts/run_demo.py --scenario combined_safety_privacy_crisis --seed 42`: passed, decision `block`.
 - `uv run python scripts/verify_determinism.py --scenario combined_safety_privacy_crisis --seed 42`: passed.
@@ -45,4 +47,4 @@ Deploy with Render using `render.yaml`. Set `PUBLIC_BASE_URL` to the final HTTPS
 
 ## Remaining Human Actions
 
-Create the public GitHub repository, push this code, deploy the Render service, set the final public URL, rerun live smoke and judge tests, and submit the skill to the NANDA Town skills registry.
+Submit the skill to the NANDA Town skills registry, confirm the card shows `link responded`, record the required video demo, and submit the final Google form.

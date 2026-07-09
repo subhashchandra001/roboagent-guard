@@ -18,6 +18,14 @@ def agent_card(base_url: str, version: str) -> dict[str, object]:
         "capabilities_url": f"{base}/capabilities",
         "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
         "supported_decisions": [item.value for item in Decision],
+        "autonomy_model": {
+            "default": "agent_autonomous",
+            "human_intervention": "exception_only",
+            "description": (
+                "Agents can approve, constrain, modify, or block actions without human help. "
+                "Human escalation is reserved for stale evidence or unresolved uncertainty."
+            ),
+        },
         "authentication": {
             "required": False,
             "note": (
