@@ -1,6 +1,12 @@
 # NandaHack Phase 2 Submission Checklist
 
-Use this file to track the final hosted submission. Replace `PUBLIC_URL` with the deployed HTTPS URL, for example `https://roboagent-guard.onrender.com`.
+Use this file to track the final hosted submission.
+
+Current public URL:
+
+```text
+https://roboagent-guard.onrender.com
+```
 
 ## Current Local Status
 
@@ -15,12 +21,12 @@ Use this file to track the final hosted submission. Replace `PUBLIC_URL` with th
 
 ## Pending Hosted Submission Work
 
-- [ ] Deploy the service to a public HTTPS host.
-- [ ] Set `PUBLIC_BASE_URL` on the host to the final deployed URL.
-- [ ] Run `uv run python scripts/smoke_test_live.py --base-url PUBLIC_URL`.
-- [ ] Run `uv run python scripts/run_judge_test.py --base-url PUBLIC_URL`.
-- [ ] Confirm `PUBLIC_URL/SKILL.md` returns Markdown with the public base URL, not localhost.
-- [ ] Confirm `PUBLIC_URL/skill.md` also works.
+- [x] Deploy the service to a public HTTPS host.
+- [x] Set `PUBLIC_BASE_URL` on the host to the final deployed URL.
+- [x] Run `uv run python scripts/smoke_test_live.py --base-url https://roboagent-guard.onrender.com`.
+- [x] Run `uv run python scripts/run_judge_test.py --base-url https://roboagent-guard.onrender.com`.
+- [x] Confirm `https://roboagent-guard.onrender.com/SKILL.md` returns Markdown with the public base URL, not localhost.
+- [x] Confirm `https://roboagent-guard.onrender.com/skill.md` also works.
 - [ ] Submit or resubmit the NANDA Skills Registry entry.
 - [ ] Confirm the registry card appears.
 - [ ] Confirm the registry card badge says `link responded`.
@@ -73,7 +79,7 @@ YOUR_EMAIL
 GitHub username:
 
 ```text
-YOUR_GITHUB_HANDLE
+subhashchandra001
 ```
 
 One line description:
@@ -91,7 +97,7 @@ Hosted link
 Hosted `.md` link:
 
 ```text
-PUBLIC_URL/skill.md
+https://roboagent-guard.onrender.com/skill.md
 ```
 
 Tags:
@@ -103,17 +109,18 @@ robotics, safety, privacy, digital-twin, slam, replay, agents
 ## Endpoint Lines To Paste In Registry
 
 ```text
-GET PUBLIC_URL/health
-GET PUBLIC_URL/SKILL.md
-GET PUBLIC_URL/skill.md
-GET PUBLIC_URL/capabilities
-GET PUBLIC_URL/.well-known/agent.json
-POST PUBLIC_URL/v1/evaluate
-POST PUBLIC_URL/v1/evaluate/batch
-GET PUBLIC_URL/v1/scenarios
-POST PUBLIC_URL/v1/scenarios/normal_navigation/run?seed=42
-GET PUBLIC_URL/v1/demo
-POST PUBLIC_URL/v1/judge-test
+GET https://roboagent-guard.onrender.com/health
+GET https://roboagent-guard.onrender.com/healthz
+GET https://roboagent-guard.onrender.com/SKILL.md
+GET https://roboagent-guard.onrender.com/skill.md
+GET https://roboagent-guard.onrender.com/capabilities
+GET https://roboagent-guard.onrender.com/.well-known/agent.json
+POST https://roboagent-guard.onrender.com/v1/evaluate
+POST https://roboagent-guard.onrender.com/v1/evaluate/batch
+GET https://roboagent-guard.onrender.com/v1/scenarios
+POST https://roboagent-guard.onrender.com/v1/scenarios/normal_navigation/run?seed=42
+GET https://roboagent-guard.onrender.com/v1/demo
+POST https://roboagent-guard.onrender.com/v1/judge-test
 ```
 
 ## Live Verification Commands
@@ -121,25 +128,25 @@ POST PUBLIC_URL/v1/judge-test
 Warm the service:
 
 ```bash
-curl --fail PUBLIC_URL/health
+curl --fail https://roboagent-guard.onrender.com/health
 ```
 
 Run complete live smoke test:
 
 ```bash
-uv run python scripts/smoke_test_live.py --base-url PUBLIC_URL
+uv run python scripts/smoke_test_live.py --base-url https://roboagent-guard.onrender.com
 ```
 
 Run live judge-style test:
 
 ```bash
-uv run python scripts/run_judge_test.py --base-url PUBLIC_URL
+uv run python scripts/run_judge_test.py --base-url https://roboagent-guard.onrender.com
 ```
 
 Verify the skill file:
 
 ```bash
-curl --fail PUBLIC_URL/skill.md
+curl --fail https://roboagent-guard.onrender.com/skill.md
 ```
 
 Verify registry API after submission:
@@ -156,12 +163,21 @@ curl --fail https://nandatown.projectnanda.org/api/skills/ENTRY_ID
 
 ## Final Manual Checklist
 
-- [ ] Public service URL opens in browser.
-- [ ] `PUBLIC_URL/health` returns `ok`.
-- [ ] `PUBLIC_URL/skill.md` contains `Base URL` with the public URL.
+- [x] Public service URL opens in browser.
+- [x] `https://roboagent-guard.onrender.com/health` returns `ok`.
+- [x] `https://roboagent-guard.onrender.com/skill.md` contains `Base URL` with the public URL.
 - [ ] Skills registry entry uses GitHub handle, not GitHub URL.
 - [ ] Skills registry endpoint lines use full live URLs.
 - [ ] Registry says `link responded`.
 - [ ] Required video is uploaded and linked in the Google form.
 - [ ] Google form is resubmitted with the new required fields.
 - [ ] Service remains available through judging.
+
+## Audit Verification Note
+
+The default local audit file is generated while running demos and tests. If it contains old or mixed local data, verify a fresh audit path before submission:
+
+```bash
+AUDIT_PATH=/tmp/roboagent-guard-audit-check.jsonl uv run python scripts/run_demo.py --scenario normal_navigation --seed 42
+AUDIT_PATH=/tmp/roboagent-guard-audit-check.jsonl uv run python scripts/verify_audit_chain.py --path /tmp/roboagent-guard-audit-check.jsonl
+```

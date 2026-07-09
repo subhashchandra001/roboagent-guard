@@ -63,8 +63,7 @@ def live_check(base_url: str) -> int:
     base = base_url.rstrip("/")
     with httpx.Client(timeout=75.0) as client:
         assert (
-            request_with_retry(lambda: client.get(f"{base}/health"), "/health").status_code
-            == 200
+            request_with_retry(lambda: client.get(f"{base}/health"), "/health").status_code == 200
         )
         assert (
             request_with_retry(lambda: client.get(f"{base}/SKILL.md"), "/SKILL.md").status_code

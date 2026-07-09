@@ -31,9 +31,9 @@ RoboAgent Guard checks a proposed mobile-robot action for authorization, replay,
 - `block`: execute nothing; the digital twin does not apply the action.
 - `request_human_approval`: pause execution and ask a human for review.
 
-## Required Evaluation Request Fields
+## Evaluation Request Fields
 
-Top-level JSON fields for `POST /v1/evaluate`:
+Required top-level JSON fields for `POST /v1/evaluate`:
 
 - `request_id`
 - `nonce`
@@ -43,8 +43,14 @@ Top-level JSON fields for `POST /v1/evaluate`:
 - `robot_state`
 - `perception`
 - `privacy`
-- `approval`
 - `simulation_seed`
+
+Optional top-level JSON fields:
+
+- `approval`
+- `client_risk_score`
+- `safety_approved`
+- `metadata`
 
 Use a timezone-aware timestamp. Use a unique `request_id` and `nonce` for every production evaluation.
 
@@ -90,7 +96,7 @@ Alias for `GET /health`. This is useful for hosting platform health checks.
 Example:
 
 ```bash
-curl --fail https://roboagent-guard.onrender.com/healthz
+curl --fail PUBLIC_BASE_URL/healthz
 ```
 
 Example response:
