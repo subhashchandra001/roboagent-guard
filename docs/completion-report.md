@@ -11,6 +11,9 @@
 - Exception-only human escalation for stale evidence or unresolved uncertainty.
 - Ten required scenarios with expected decisions.
 - Hash-chained JSONL audit records and tamper verification.
+- Hash-verifiable decision receipts through `GET /v1/receipts/{evaluation_id}` and `POST /v1/receipts/verify`.
+- Server-side caller role registry for known demonstration identities and privileged-role spoofing checks.
+- Stronger image payload rejection for suspicious keys, `data:image/...` values, and common image signatures encoded as base64.
 - NANDA Town-style trace export under `artifacts/nanda_traces/`.
 - FastAPI endpoints for health, discovery, capabilities, evaluation, batch evaluation, scenarios, demo, and judge testing.
 - Public `SKILL.md` with exact agent workflow and copyable examples.
@@ -18,7 +21,7 @@
 
 ## Endpoint List
 
-`GET /`, `GET /health`, `GET /healthz`, `GET /SKILL.md`, `GET /skill.md`, `GET /capabilities`, `GET /.well-known/agent.json`, `POST /v1/evaluate`, `POST /v1/evaluate/batch`, `GET /v1/scenarios`, `POST /v1/scenarios/{scenario_name}/run`, `GET /v1/evaluations/{evaluation_id}`, `GET /v1/demo`, `POST /v1/judge-test`, `POST /v1/agent-skill-test`, and `POST /v1/compose/mission-plan`.
+`GET /`, `GET /health`, `GET /healthz`, `GET /SKILL.md`, `GET /skill.md`, `GET /capabilities`, `GET /.well-known/agent.json`, `POST /v1/evaluate`, `POST /v1/evaluate/batch`, `GET /v1/scenarios`, `POST /v1/scenarios/{scenario_name}/run`, `GET /v1/evaluations/{evaluation_id}`, `GET /v1/receipts/{evaluation_id}`, `POST /v1/receipts/verify`, `GET /v1/demo`, `POST /v1/judge-test`, `POST /v1/agent-skill-test`, and `POST /v1/compose/mission-plan`.
 
 ## Scenario List
 
@@ -31,8 +34,8 @@
 - `uv run ruff check .`: passed.
 - `uv run ruff format --check .`: passed.
 - `uv run pyright`: passed with 0 errors.
-- `uv run pytest -q`: 94 passed, 1 third-party deprecation warning.
-- `uv run pytest --cov=roboagent_guard --cov-report=term-missing`: 94 passed, total coverage 94.56%.
+- `uv run pytest -q`: 106 passed, 1 third-party deprecation warning.
+- `uv run pytest --cov=roboagent_guard --cov-report=term-missing`: 106 passed, total coverage 94.30%.
 - `uv run python scripts/run_demo.py --scenario normal_navigation --seed 42`: passed, decision `approve`.
 - `uv run python scripts/run_demo.py --scenario combined_safety_privacy_crisis --seed 42`: passed, decision `block`.
 - `uv run python scripts/verify_determinism.py --scenario combined_safety_privacy_crisis --seed 42`: passed.
@@ -41,7 +44,7 @@
 
 ## Known Limitations
 
-RoboAgent Guard is a deterministic simulation-based prototype. It does not cryptographically verify caller identity, does not control a physical robot, and is not a safety-certified controller. ROS 2 and physical TurtleBot4 validation are future work.
+RoboAgent Guard is a deterministic simulation-based prototype. It uses a deterministic demo caller registry rather than cryptographic caller identity, does not control a physical robot, and is not a safety-certified controller. ROS 2 and physical TurtleBot4 validation are future work.
 
 ## Deployment Instructions
 
@@ -49,4 +52,4 @@ Deploy with Render using `render.yaml`. Set `PUBLIC_BASE_URL` to the final HTTPS
 
 ## Remaining Human Actions
 
-Submit the skill to the NANDA Town skills registry, confirm the card shows `link responded`, record the required video demo, and submit the final Google form.
+The skill is submitted to the NANDA Town skills registry and the card shows `link responded`. Remaining manual actions are to record the required video demo and submit the final Google form.

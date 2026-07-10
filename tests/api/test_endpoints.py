@@ -190,6 +190,45 @@ def test_get_evaluation(client):
     assert fetched.json()["evaluation_id"] == created["evaluation_id"]
 
 
+def test_receipt_round_trip_and_verification(client):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "receipt-eval"
+    request["nonce"] = "receipt-eval-nonce"
+    created = client.post("/v1/evaluate", json=request).json()
+
+    receipt_response = client.get(f"/v1/receipts/{created['evaluation_id']}")
+    receipt = receipt_response.json()
+    verified = client.post("/v1/receipts/verify", json=receipt)
+
+    assert receipt_response.status_code == 200
+    assert receipt["evaluation_id"] == created["evaluation_id"]
+    assert receipt["trace_hash"] == created["trace_hash"]
+    assert receipt["receipt_hash"]
+    assert verified.status_code == 200
+    assert verified.json()["valid"] is True
+
+
+def test_tampered_receipt_fails_verification(client):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "tampered-receipt"
+    request["nonce"] = "tampered-receipt-nonce"
+    created = client.post("/v1/evaluate", json=request).json()
+    receipt = client.get(f"/v1/receipts/{created['evaluation_id']}").json()
+    receipt["decision"] = "block"
+
+    verified = client.post("/v1/receipts/verify", json=receipt)
+
+    assert verified.status_code == 200
+    assert verified.json()["valid"] is False
+    assert verified.json()["reason"] == "receipt_hash does not match receipt payload"
+
+
+def test_missing_receipt_returns_404(client):
+    response = client.get("/v1/receipts/not-found")
+
+    assert response.status_code == 404
+
+
 def test_judge_endpoint(client):
     response = client.post("/v1/judge-test")
     assert response.status_code == 200

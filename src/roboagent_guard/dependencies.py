@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 from roboagent_guard.audit.store import AuditStore
 from roboagent_guard.config import Settings, get_settings
+from roboagent_guard.models.responses import EvaluationResponse
 from roboagent_guard.security.approval_tokens import ApprovalTokenStore
 from roboagent_guard.security.replay_guard import ReplayGuard
 
@@ -13,7 +14,7 @@ class AppState:
     settings: Settings = field(default_factory=get_settings)
     replay_guard: ReplayGuard = field(default_factory=ReplayGuard)
     token_store: ApprovalTokenStore = field(default_factory=ApprovalTokenStore)
-    evaluations: dict[str, object] = field(default_factory=dict)
+    evaluations: dict[str, EvaluationResponse] = field(default_factory=dict)
     _audit_store: AuditStore | None = None
 
     def audit_store(self) -> AuditStore:

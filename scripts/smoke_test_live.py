@@ -127,6 +127,20 @@ def main() -> int:
         )
         print("/v1/evaluations/{evaluation_id}", json_body(fetched)["decision"])
 
+        receipt = request_with_retry(
+            lambda: client.get(base + f"/v1/receipts/{evaluation_id}"),
+            "/v1/receipts/{evaluation_id}",
+        )
+        receipt_body = json_body(receipt)
+        assert receipt_body["evaluation_id"] == evaluation_id
+        verified = request_with_retry(
+            lambda: client.post(base + "/v1/receipts/verify", json=receipt_body),
+            "/v1/receipts/verify",
+        )
+        verify_body = json_body(verified)
+        assert verify_body["valid"] is True
+        print("/v1/receipts/{evaluation_id}", verify_body["valid"])
+
         judge = request_with_retry(lambda: client.post(base + "/v1/judge-test"), "/v1/judge-test")
         judge_body = json_body(judge)
         assert judge_body["passed"] is True

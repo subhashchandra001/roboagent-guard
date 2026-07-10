@@ -79,12 +79,20 @@ def test_modified_action_applies_replacement(engine):
 
 
 @pytest.mark.parametrize(
-    ("action_type", "role", "authorized_actions", "field", "expected"),
+    ("action_type", "role", "caller_id", "authorized_actions", "field", "expected"),
     [
-        (ActionType.ROTATE, CallerRole.PLANNER, [ActionType.ROTATE], "heading_rad", 0.5),
+        (
+            ActionType.ROTATE,
+            CallerRole.PLANNER,
+            "planner-agent-01",
+            [ActionType.ROTATE],
+            "heading_rad",
+            0.5,
+        ),
         (
             ActionType.UPDATE_MAP,
             CallerRole.MAPPING_AGENT,
+            "mapping-agent-01",
             [ActionType.UPDATE_MAP],
             "map_update_count",
             1,
@@ -92,6 +100,7 @@ def test_modified_action_applies_replacement(engine):
         (
             ActionType.SHARE_SENSOR_SUMMARY,
             CallerRole.PRIVACY_AGENT,
+            "privacy-agent-01",
             [ActionType.SHARE_SENSOR_SUMMARY],
             "sensor_summary_shared",
             True,
@@ -99,11 +108,12 @@ def test_modified_action_applies_replacement(engine):
     ],
 )
 def test_advertised_actions_have_twin_effect(
-    engine, action_type, role, authorized_actions, field, expected
+    engine, action_type, role, caller_id, authorized_actions, field, expected
 ):
     req = scenario_request("normal_navigation", 42)
     req.request_id = f"action-{action_type}"
     req.nonce = f"action-{action_type}-nonce"
+    req.caller.id = caller_id
     req.caller.role = role
     req.caller.authorized_actions = authorized_actions
     req.action.type = action_type

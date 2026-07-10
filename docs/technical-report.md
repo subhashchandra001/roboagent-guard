@@ -46,6 +46,7 @@ Important runtime files:
 - `src/roboagent_guard/app.py`: FastAPI app, discovery endpoints, evaluation endpoints, scenario endpoints, demo endpoints, judge endpoint, SkillMD proof endpoint, and composed mission-planner endpoint.
 - `src/roboagent_guard/simulator/runner.py`: orchestration engine for all guards, agents, supervisor, twin, audit, and trace export.
 - `src/roboagent_guard/agents/authorization.py`: role/action authorization checks.
+- `src/roboagent_guard/policies/role_policy.py`: deterministic demo caller registry used to catch privileged role spoofing.
 - `src/roboagent_guard/agents/physical_risk.py`: obstacle, speed, surface, disturbance, and battery risk.
 - `src/roboagent_guard/agents/slam_reliability.py`: illumination, blur, inlier ratio, confidence, entropy, and sensor-age risk.
 - `src/roboagent_guard/agents/privacy.py`: raw camera, face data, private zone, storage, retention, and recipient policy.
@@ -79,14 +80,14 @@ Optional fields:
 - `approval.token`: approval token, if available.
 - `client_risk_score`: accepted as input but ignored for final safety decisions.
 - `safety_approved`: accepted as input but ignored for final safety decisions.
-- `metadata`: small arbitrary metadata map. Image-like keys such as `image`, `frame`, `camera_frame`, and `base64_image` are rejected.
+- `metadata`: small arbitrary metadata map. Image-like keys, `data:image/...` strings, and image-looking base64 payloads are rejected.
 
 ## 5. Request Flow
 
 `POST /v1/evaluate` performs the production evaluation flow:
 
 1. Read raw JSON.
-2. Reject actual image-like payloads.
+2. Reject actual image-like payloads, including image keys, data URIs, and common image magic bytes encoded as base64.
 3. Validate against Pydantic schemas.
 4. Check replay guard for repeated request IDs, nonces, or blocked action evidence.
 5. Check freshness against `evaluation_time` when supplied, otherwise against the request `timestamp` as the deterministic snapshot time.
@@ -120,6 +121,8 @@ Evaluation:
 - `POST /v1/evaluate`: evaluate one action request.
 - `POST /v1/evaluate/batch`: evaluate 1 to 25 action requests.
 - `GET /v1/evaluations/{evaluation_id}`: retrieve an evaluation produced during the current process lifetime.
+- `GET /v1/receipts/{evaluation_id}`: retrieve a compact hash-verifiable decision receipt.
+- `POST /v1/receipts/verify`: recompute the stable JSON receipt hash and report whether the receipt is intact.
 
 Scenarios and demos:
 
@@ -188,6 +191,19 @@ Policy behavior:
 - Face data sharing without a filter is blocked.
 - Long retention is modified with a `reduce_retention` control.
 - Private-zone/person contexts are allowed only with conservative constraints when no hard block is triggered.
+
+Authorization behavior:
+
+- Known demonstration caller ids are checked against a server-side role registry.
+- A known caller id claiming a different role is blocked with `CALLER_ROLE_MISMATCH`.
+- Unregistered callers cannot claim privileged roles such as `supervisor`, `mapping_agent`, `privacy_agent`, or `robot`.
+- Client-provided safety claims, risk scores, and role text never override server-side policy.
+
+Decision receipts:
+
+- Every stored evaluation can be converted into a receipt containing the decision, risk, recommended action, digital-twin application flag, violation codes, trace hash, and policy version.
+- `receipt_hash` is computed from stable JSON with SHA-256.
+- `POST /v1/receipts/verify` catches tampering by recomputing that hash and, when the evaluation is still in memory, comparing it against the stored evaluation receipt.
 
 ## 11. Frontend Console
 
@@ -338,7 +354,7 @@ The pass corrected these issues:
 
 - Scenario and demo routes now use isolated replay guards, so the browser console remains repeatable while production evaluation remains strict.
 - `/v1/judge-test` now isolates safe and unsafe judge examples, so repeated judge checks do not poison themselves through replay memory.
-- Embedded image-like payloads are rejected at the `EvaluationRequest` model layer, so both single and batch evaluation enforce the no-actual-images rule.
+- Embedded image-like payloads are rejected at the `EvaluationRequest` model layer, so both single and batch evaluation enforce the no-actual-images rule. This includes suspicious keys, `data:image/...` values, and base64 payloads with common image signatures.
 - `/capabilities` now uses the active app settings instead of constructing separate settings.
 - The UI now includes component cards, safer HTML text rendering, clearer demo status, and a more polished operational dashboard.
 

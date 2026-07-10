@@ -31,6 +31,7 @@ RoboAgent Guard checks a proposed mobile-robot action for authorization, replay,
 8. Ask a human only if `human_approval_required` is true or the decision is `request_human_approval`.
 9. Never retry the same `request_id` or `nonce`.
 10. Do not send images. Camera use is represented only by metadata flags such as `share_raw_camera`, `face_data_present`, and `privacy_filter_applied`.
+11. For auditability, fetch `GET /v1/receipts/{evaluation_id}` after an evaluation and verify it with `POST /v1/receipts/verify`.
 
 ## Decision Meanings
 
@@ -173,7 +174,12 @@ Example response:
   "autonomy_model": {"default": "agent_autonomous", "human_intervention": "exception_only"},
   "required_fields": ["request_id", "nonce", "timestamp", "caller", "action", "robot_state", "perception", "privacy", "simulation_seed"],
   "optional_fields": ["evaluation_time", "approval", "client_risk_score", "safety_approved", "metadata"],
-  "demo_endpoints": {"judge_skill_test": "POST /v1/agent-skill-test", "composed_mission_planner": "POST /v1/compose/mission-plan"},
+  "demo_endpoints": {
+    "judge_skill_test": "POST /v1/agent-skill-test",
+    "composed_mission_planner": "POST /v1/compose/mission-plan",
+    "decision_receipt": "GET /v1/receipts/{evaluation_id}",
+    "verify_receipt": "POST /v1/receipts/verify"
+  },
   "scenario_names": ["combined_safety_privacy_crisis", "hidden_low_slam_confidence", "low_light_high_speed", "low_light_slow_motion", "normal_navigation", "person_in_private_zone", "replayed_approved_action", "slam_degradation", "unauthorized_camera_request", "uneven_surface_high_blur"]
 }
 ```
@@ -202,7 +208,9 @@ Example response:
   "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
   "demo_endpoints": {
     "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},
-    "composed_mission_planner": {"method": "POST", "path": "/v1/compose/mission-plan"}
+    "composed_mission_planner": {"method": "POST", "path": "/v1/compose/mission-plan"},
+    "decision_receipt": {"method": "GET", "path": "/v1/receipts/{evaluation_id}"},
+    "verify_receipt": {"method": "POST", "path": "/v1/receipts/verify"}
   },
   "authentication": {"required": false, "note": "Hackathon demonstration service. Caller authorization is represented in the request and verified against demonstration policy."}
 }
@@ -333,6 +341,52 @@ Example response:
 }
 ```
 
+### GET /v1/receipts/{evaluation_id}
+
+Returns a compact, hash-verifiable decision receipt for an evaluation created during the current process lifetime. Use this when a downstream agent needs a portable proof of the decision, trace hash, policy version, and recommended action.
+
+Example:
+
+```bash
+curl --fail PUBLIC_BASE_URL/v1/receipts/eval-18ee54408a7c
+```
+
+Example response:
+
+```json
+{
+  "evaluation_id": "eval-18ee54408a7c",
+  "request_id": "normal-navigation",
+  "decision": "approve",
+  "risk_level": "low",
+  "recommended_action": {"type": "navigate", "linear_speed_mps": 0.15},
+  "digital_twin_action_applied": true,
+  "violation_codes": [],
+  "trace_hash": "sha256:...",
+  "policy_version": "1.0.0",
+  "algorithm": "sha256-stable-json",
+  "receipt_hash": "sha256:..."
+}
+```
+
+### POST /v1/receipts/verify
+
+Verifies a receipt returned by `GET /v1/receipts/{evaluation_id}`. It recomputes the stable JSON hash and returns `valid: true` only when the receipt payload has not been changed.
+
+Example:
+
+```bash
+curl --fail -X POST PUBLIC_BASE_URL/v1/receipts/verify \
+  -H 'Content-Type: application/json' \
+  --data '{"evaluation_id":"eval-18ee54408a7c","request_id":"normal-navigation","decision":"approve","risk_level":"low","risk_score":0.045,"recommended_action":{"type":"navigate","linear_speed_mps":0.15,"angular_speed_rps":0.0,"target":{"x":1.0,"y":0.0},"save_map":false,"share_raw_camera":false,"store_sensor_data":false,"recipient_id":null},"digital_twin_action_applied":true,"violation_codes":[],"trace_hash":"sha256:...","policy_version":"1.0.0","algorithm":"sha256-stable-json","receipt_hash":"sha256:..."}'
+```
+
+Example response:
+
+```json
+{"valid": true, "reason": "receipt_hash matches receipt payload", "receipt_hash": "sha256:..."}
+```
+
 ### GET /v1/demo
 
 Runs a small demo pack containing safe, modified, and blocked cases.
@@ -383,6 +437,12 @@ Example:
 curl --fail -X POST PUBLIC_BASE_URL/v1/agent-skill-test
 ```
 
+Live public example:
+
+```bash
+curl --fail -X POST https://roboagent-guard.onrender.com/v1/agent-skill-test
+```
+
 Example response:
 
 ```json
@@ -409,6 +469,12 @@ Example:
 curl --fail -X POST PUBLIC_BASE_URL/v1/compose/mission-plan
 ```
 
+Live public example:
+
+```bash
+curl --fail -X POST https://roboagent-guard.onrender.com/v1/compose/mission-plan
+```
+
 Example response:
 
 ```json
@@ -433,6 +499,7 @@ Use this exact flow when controlling or simulating a robot action:
 6. If `decision` is `modify`, execute only `recommended_action`.
 7. If `decision` is `block`, execute nothing.
 8. If `decision` is `request_human_approval`, ask a human supervisor before proceeding. This is an exception path, not the normal operating path.
+9. If an audit trail is needed, fetch `GET /v1/receipts/{evaluation_id}` and verify it with `POST /v1/receipts/verify`.
 
 ## Safe Test Call
 

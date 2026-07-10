@@ -20,6 +20,8 @@ def agent_card(base_url: str, version: str) -> dict[str, object]:
         "demo_endpoints": {
             "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},
             "composed_mission_planner": {"method": "POST", "path": "/v1/compose/mission-plan"},
+            "decision_receipt": {"method": "GET", "path": "/v1/receipts/{evaluation_id}"},
+            "verify_receipt": {"method": "POST", "path": "/v1/receipts/verify"},
         },
         "supported_decisions": [item.value for item in Decision],
         "autonomy_model": {

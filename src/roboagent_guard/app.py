@@ -8,6 +8,7 @@ import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
+from roboagent_guard.audit.hashing import sha256_digest
 from roboagent_guard.dependencies import AppState, get_app_state
 from roboagent_guard.discovery.agent_card import agent_card
 from roboagent_guard.models.common import HealthResponse
@@ -44,6 +45,24 @@ def demo_engine(state: AppState) -> EvaluationEngine:
         token_store=state.token_store,
         audit_store=state.audit_store(),
     )
+
+
+def decision_receipt(response: EvaluationResponse) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "evaluation_id": response.evaluation_id,
+        "request_id": response.request_id,
+        "decision": response.decision,
+        "risk_level": response.risk_level,
+        "risk_score": response.risk_score,
+        "recommended_action": response.recommended_action.model_dump(mode="json"),
+        "digital_twin_action_applied": response.digital_twin.action_applied,
+        "violation_codes": response.violation_codes,
+        "trace_hash": response.trace_hash,
+        "policy_version": response.policy_version,
+        "algorithm": "sha256-stable-json",
+    }
+    payload["receipt_hash"] = sha256_digest(payload)
+    return payload
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -117,6 +136,8 @@ def capabilities(state: StateDep) -> dict[str, Any]:
         "demo_endpoints": {
             "judge_skill_test": "POST /v1/agent-skill-test",
             "composed_mission_planner": "POST /v1/compose/mission-plan",
+            "decision_receipt": "GET /v1/receipts/{evaluation_id}",
+            "verify_receipt": "POST /v1/receipts/verify",
         },
     }
 
@@ -182,6 +203,47 @@ def get_evaluation(evaluation_id: str, state: StateDep) -> object:
         return state.evaluations[evaluation_id]
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="evaluation not found") from exc
+
+
+@app.get("/v1/receipts/{evaluation_id}")
+def get_receipt(evaluation_id: str, state: StateDep) -> dict[str, Any]:
+    try:
+        return decision_receipt(state.evaluations[evaluation_id])
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="evaluation not found") from exc
+
+
+@app.post("/v1/receipts/verify")
+def verify_receipt(receipt: dict[str, Any], state: StateDep) -> dict[str, object]:
+    supplied_hash = receipt.get("receipt_hash")
+    if not isinstance(supplied_hash, str) or not supplied_hash:
+        return {"valid": False, "reason": "receipt_hash is missing"}
+    payload = {key: value for key, value in receipt.items() if key != "receipt_hash"}
+    expected_hash = sha256_digest(payload)
+    if supplied_hash != expected_hash:
+        return {
+            "valid": False,
+            "reason": "receipt_hash does not match receipt payload",
+            "expected_hash": expected_hash,
+            "supplied_hash": supplied_hash,
+        }
+
+    evaluation_id = receipt.get("evaluation_id")
+    if isinstance(evaluation_id, str) and evaluation_id in state.evaluations:
+        stored = decision_receipt(state.evaluations[evaluation_id])
+        if supplied_hash != stored["receipt_hash"]:
+            return {
+                "valid": False,
+                "reason": "receipt is validly hashed but does not match stored evaluation",
+                "expected_hash": stored["receipt_hash"],
+                "supplied_hash": supplied_hash,
+            }
+
+    return {
+        "valid": True,
+        "reason": "receipt_hash matches receipt payload",
+        "receipt_hash": supplied_hash,
+    }
 
 
 @app.get("/v1/demo")

@@ -6,9 +6,11 @@ from roboagent_guard.models.requests import EvaluationRequest
 from roboagent_guard.policies import hard_constraints as codes
 from roboagent_guard.policies.role_policy import (
     MAP_SAVE_ROLES,
+    PRIVILEGED_ROLES,
     RAW_CAMERA_ROLES,
     STORAGE_ROLES,
     allowed_actions_for,
+    registered_role_for,
 )
 
 
@@ -20,6 +22,29 @@ class AuthorizationAgent:
         role = request.caller.role
         action = request.action
         allowed_by_server = allowed_actions_for(role)
+        registered_role = registered_role_for(request.caller.id)
+
+        if registered_role is not None and registered_role != role:
+            violations.append(
+                Violation(
+                    code=codes.CALLER_ROLE_MISMATCH,
+                    message=(
+                        "Caller id is registered with a different server-side role than "
+                        "the request claims."
+                    ),
+                    observed={"caller_id": request.caller.id, "claimed_role": role},
+                    threshold=registered_role,
+                )
+            )
+        if registered_role is None and role in PRIVILEGED_ROLES:
+            violations.append(
+                Violation(
+                    code=codes.CALLER_ROLE_MISMATCH,
+                    message="Privileged caller role must be registered server-side.",
+                    observed={"caller_id": request.caller.id, "claimed_role": role},
+                    threshold=sorted(PRIVILEGED_ROLES),
+                )
+            )
 
         if action.type not in allowed_by_server:
             violations.append(
@@ -75,6 +100,11 @@ class AuthorizationAgent:
             decision=Decision.BLOCK if violations else Decision.APPROVE,
             violations=violations,
             recommended_controls=["block"] if violations else [],
-            evidence={"role": role, "action": action.type},
+            evidence={
+                "caller_id": request.caller.id,
+                "claimed_role": role,
+                "registered_role": registered_role,
+                "action": action.type,
+            },
             reasons=["Authorization failed."] if violations else ["Caller is authorized."],
         )

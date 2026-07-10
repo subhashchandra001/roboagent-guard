@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import base64
+
 import pytest
 from pydantic import ValidationError
 
-from roboagent_guard.models.decisions import Decision
+from roboagent_guard.models.decisions import CallerRole, Decision
 from roboagent_guard.security.approval_tokens import ApprovalTokenStore
 from roboagent_guard.simulator.scenarios import scenario_request
 
@@ -62,6 +64,37 @@ def test_client_safety_claim_does_not_override_evidence(engine):
     assert "RAW_CAMERA_UNAUTHORIZED_RECIPIENT" in response.violation_codes
 
 
+def test_registered_caller_role_mismatch_blocks(engine):
+    req = scenario_request("normal_navigation", 42)
+    req.caller.id = "planner-agent-01"
+    req.caller.role = CallerRole.SUPERVISOR
+
+    response = engine.evaluate(req, audit=False)
+
+    assert response.decision == Decision.BLOCK
+    assert "CALLER_ROLE_MISMATCH" in response.violation_codes
+
+
+def test_unregistered_privileged_caller_blocks(engine):
+    req = scenario_request("normal_navigation", 42)
+    req.caller.id = "fake-supervisor"
+    req.caller.role = CallerRole.SUPERVISOR
+
+    response = engine.evaluate(req, audit=False)
+
+    assert response.decision == Decision.BLOCK
+    assert "CALLER_ROLE_MISMATCH" in response.violation_codes
+
+
+def test_registered_planner_still_passes_nominal_authorization(engine):
+    req = scenario_request("normal_navigation", 42)
+
+    response = engine.evaluate(req, audit=False)
+
+    assert response.decision == Decision.APPROVE
+    assert "CALLER_ROLE_MISMATCH" not in response.violation_codes
+
+
 def test_privacy_marker_claim_does_not_replace_required_filter(engine):
     req = scenario_request("unauthorized_camera_request", 42)
     req.privacy.privacy_filter_applied = False
@@ -99,6 +132,43 @@ def test_api_rejects_nested_image_payload(client):
 
     assert response.status_code == 422
     assert "actual image content is not accepted" in response.json()["detail"]
+
+
+def test_api_rejects_data_uri_image_payload(client):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "data-uri-image-payload"
+    request["nonce"] = "data-uri-image-payload-nonce"
+    request["metadata"] = {"debug_blob": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg=="}
+
+    response = client.post("/v1/evaluate", json=request)
+
+    assert response.status_code == 422
+    assert "actual image content is not accepted" in response.json()["detail"]
+
+
+def test_api_rejects_base64_image_bytes_under_generic_key(client):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "base64-image-bytes"
+    request["nonce"] = "base64-image-bytes-nonce"
+    png_like_bytes = b"\x89PNG\r\n\x1a\n" + (b"\x00" * 80)
+    request["metadata"] = {"debug_blob": base64.b64encode(png_like_bytes).decode("ascii")}
+
+    response = client.post("/v1/evaluate", json=request)
+
+    assert response.status_code == 422
+    assert "actual image content is not accepted" in response.json()["detail"]
+
+
+def test_api_allows_text_camera_metadata(client):
+    request = scenario_request("normal_navigation", 42).model_dump(mode="json")
+    request["request_id"] = "text-camera-metadata"
+    request["nonce"] = "text-camera-metadata-nonce"
+    request["metadata"] = {"sensor_status": "camera disabled; metadata flags only"}
+
+    response = client.post("/v1/evaluate", json=request)
+
+    assert response.status_code == 200
+    assert response.json()["decision"] == Decision.APPROVE
 
 
 def test_reused_approval_token_blocks(tmp_path):

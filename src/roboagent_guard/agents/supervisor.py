@@ -98,6 +98,7 @@ class SupervisorAgent:
     def _hard_block_codes() -> set[str]:
         return {
             codes.UNAUTHORIZED_ACTION,
+            codes.CALLER_ROLE_MISMATCH,
             codes.UNAUTHORIZED_RAW_CAMERA,
             codes.UNAUTHORIZED_MAP_SAVE,
             codes.UNAUTHORIZED_STORAGE,

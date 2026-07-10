@@ -29,9 +29,9 @@ https://roboagent-guard.onrender.com
 - [x] Run `uv run python scripts/run_judge_test.py --base-url https://roboagent-guard.onrender.com`.
 - [x] Confirm `https://roboagent-guard.onrender.com/SKILL.md` returns Markdown with the public base URL, not localhost.
 - [x] Confirm `https://roboagent-guard.onrender.com/skill.md` also works.
-- [ ] Submit or resubmit the NANDA Skills Registry entry.
-- [ ] Confirm the registry card appears.
-- [ ] Confirm the registry card badge says `link responded`.
+- [x] Submit or resubmit the NANDA Skills Registry entry.
+- [x] Confirm the registry card appears.
+- [x] Confirm the registry card badge says `link responded`.
 - [ ] Record the required video demo.
 - [ ] Submit the required Google form before the deadline.
 
@@ -69,13 +69,13 @@ RoboAgent Guard
 Your name or team:
 
 ```text
-Subhash
+Subhash Chandra
 ```
 
 Email:
 
 ```text
-YOUR_EMAIL
+subhashc.iisc@gmail.com
 ```
 
 GitHub username:
@@ -108,6 +108,12 @@ Tags:
 robotics, safety, privacy, digital-twin, slam, replay, agents
 ```
 
+Current registry API record:
+
+```text
+69e663b6-eb2d-4bdc-bad9-63f61b121890
+```
+
 ## Endpoint Lines To Paste In Registry
 
 ```text
@@ -121,6 +127,8 @@ POST https://roboagent-guard.onrender.com/v1/evaluate
 POST https://roboagent-guard.onrender.com/v1/evaluate/batch
 GET https://roboagent-guard.onrender.com/v1/scenarios
 POST https://roboagent-guard.onrender.com/v1/scenarios/normal_navigation/run?seed=42
+GET https://roboagent-guard.onrender.com/v1/receipts/{evaluation_id}
+POST https://roboagent-guard.onrender.com/v1/receipts/verify
 GET https://roboagent-guard.onrender.com/v1/demo
 POST https://roboagent-guard.onrender.com/v1/judge-test
 POST https://roboagent-guard.onrender.com/v1/agent-skill-test
@@ -177,9 +185,9 @@ curl --fail https://nandatown.projectnanda.org/api/skills/ENTRY_ID
 - [x] Public service URL opens in browser.
 - [x] `https://roboagent-guard.onrender.com/health` returns `ok`.
 - [x] `https://roboagent-guard.onrender.com/skill.md` contains `Base URL` with the public URL.
-- [ ] Skills registry entry uses GitHub handle, not GitHub URL.
-- [ ] Skills registry endpoint lines use full live URLs.
-- [ ] Registry says `link responded`.
+- [x] Skills registry entry uses GitHub handle, not GitHub URL.
+- [x] Skills registry endpoint lines use full live URLs.
+- [x] Registry says `link responded`.
 - [ ] Required video is uploaded and linked in the Google form.
 - [ ] Google form is resubmitted with the new required fields.
 - [ ] Service remains available through judging.
