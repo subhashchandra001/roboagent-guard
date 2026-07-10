@@ -780,6 +780,47 @@
         background:
           linear-gradient(135deg, rgba(80, 242, 194, 0.08), rgba(102, 166, 255, 0.06)),
           rgba(255, 255, 255, 0.04);
+        transition:
+          border-color 160ms ease,
+          background 160ms ease,
+          box-shadow 160ms ease;
+      }
+
+      .decision.approve,
+      .decision.low {
+        border-color: rgba(121, 242, 157, 0.52);
+        background:
+          linear-gradient(135deg, rgba(121, 242, 157, 0.13), rgba(108, 249, 216, 0.06)),
+          rgba(255, 255, 255, 0.04);
+        box-shadow: 0 0 34px rgba(121, 242, 157, 0.12);
+      }
+
+      .decision.approve_with_constraints,
+      .decision.modify,
+      .decision.medium,
+      .decision.high {
+        border-color: rgba(255, 211, 107, 0.56);
+        background:
+          linear-gradient(135deg, rgba(255, 211, 107, 0.15), rgba(197, 150, 255, 0.06)),
+          rgba(255, 255, 255, 0.04);
+        box-shadow: 0 0 34px rgba(255, 211, 107, 0.12);
+      }
+
+      .decision.block,
+      .decision.critical {
+        border-color: rgba(255, 107, 138, 0.62);
+        background:
+          linear-gradient(135deg, rgba(255, 107, 138, 0.17), rgba(255, 211, 107, 0.05)),
+          rgba(255, 255, 255, 0.04);
+        box-shadow: 0 0 38px rgba(255, 107, 138, 0.16);
+      }
+
+      .decision.request_human_approval,
+      .decision.running {
+        border-color: rgba(197, 150, 255, 0.56);
+        background:
+          linear-gradient(135deg, rgba(197, 150, 255, 0.14), rgba(105, 167, 255, 0.06)),
+          rgba(255, 255, 255, 0.04);
       }
 
       .decision-name {
@@ -815,6 +856,23 @@
       }
 
       .pill.block {
+        color: #230008;
+        background: linear-gradient(135deg, var(--danger), #ff8fa4);
+      }
+
+      .pill.low {
+        color: #03140d;
+        background: linear-gradient(135deg, var(--ok), #9bf7b6);
+      }
+
+      .pill.medium,
+      .pill.high {
+        color: #201500;
+        background: linear-gradient(135deg, var(--warn), #ffe6a3);
+      }
+
+      .pill.critical,
+      .pill.error {
         color: #230008;
         background: linear-gradient(135deg, var(--danger), #ff8fa4);
       }
@@ -1250,7 +1308,7 @@
             <h2>Decision Trace</h2>
             <span class="pill" id="traceHash">trace pending</span>
           </div>
-          <div class="decision">
+          <div class="decision" id="decisionBox">
             <div>
               <p class="muted" style="margin: 0 0 7px">Final decision</p>
               <h2 class="decision-name" id="decisionName">Ready</h2>
@@ -1363,6 +1421,30 @@
       function setDecisionPill(element, value) {
         element.className = `pill ${String(value || "").toLowerCase()}`;
         element.textContent = value || "waiting";
+      }
+
+      function setDecisionVisual(value) {
+        const stateClass = String(value || "running")
+          .toLowerCase()
+          .replaceAll(" ", "_");
+        $("decisionBox").className = `decision ${stateClass}`;
+      }
+
+      function setRunningState(label = "Running") {
+        $("decisionName").textContent = label;
+        setDecisionVisual("running");
+        setDecisionPill($("riskLevel"), "waiting");
+      }
+
+      function setErrorState(error) {
+        $("decisionName").textContent = "Error";
+        setDecisionVisual("critical");
+        setDecisionPill($("riskLevel"), "error");
+        $("recommendedAction").textContent = "-";
+        $("actionApplied").textContent = "-";
+        $("replayDetected").textContent = "-";
+        $("reasons").innerHTML = `<li>${escapeHtml(error.message || String(error))}</li>`;
+        $("jsonOutput").textContent = error.stack || String(error);
       }
 
       function createParticles() {
@@ -1488,6 +1570,7 @@
       function renderResult(result) {
         state.lastResult = result;
         $("decisionName").textContent = result.decision || "Ready";
+        setDecisionVisual(result.decision || result.risk_level || "running");
         setDecisionPill($("riskLevel"), result.risk_level || "waiting");
         $("traceHash").textContent = result.trace_hash ? `trace ${result.trace_hash.slice(0, 10)}` : "trace pending";
         $("riskScore").textContent = Number(result.risk_score || 0).toFixed(2);
@@ -1518,46 +1601,55 @@
       }
 
       async function runScenario(name) {
-        $("decisionName").textContent = "Running";
-        const result = await api(`/v1/scenarios/${name}/run?seed=42`, { method: "POST" });
-        renderResult(result);
+        setRunningState("Running");
+        try {
+          const result = await api(`/v1/scenarios/${name}/run?seed=42`, { method: "POST" });
+          renderResult(result);
+        } catch (error) {
+          setErrorState(error);
+        }
       }
 
       async function runDemo() {
-        $("decisionName").textContent = "Running";
-        const result = await api("/v1/demo");
-        state.lastResult = result;
-        $("jsonOutput").textContent = pretty(result);
-        const entries = Object.entries(result.scenarios || {});
-        $("reasons").innerHTML = entries
-          .map(
-            ([name, value]) =>
-              `<li>${escapeHtml(name)}: ${escapeHtml(value.decision)} at risk ${Number(value.risk_score).toFixed(2)}</li>`,
-          )
-          .join("");
-        $("componentGrid").innerHTML = entries
-          .map(
-            ([name, value]) => `
-              <div class="component-card ${escapeHtml(value.decision)}">
-                <span>${escapeHtml(name)}</span>
-                <strong>${escapeHtml(value.recommended_action)}</strong>
-              </div>
-            `,
-          )
-          .join("");
-        const crisis = result.scenarios?.combined_safety_privacy_crisis;
-        if (crisis) {
-          $("decisionName").textContent = "Demo Pack";
-          setDecisionPill($("riskLevel"), crisis.decision);
-          $("recommendedAction").textContent = crisis.recommended_action || "-";
-          $("riskScore").textContent = Number(crisis.risk_score || 0).toFixed(2);
-          $("slamScore").textContent = "0.00";
-          $("privacyScore").textContent = "0.00";
-          setBar("riskBar", crisis.risk_score);
-          setBar("slamBar", 0);
-          setBar("privacyBar", 0);
-          $("actionApplied").textContent = "-";
-          $("replayDetected").textContent = "-";
+        setRunningState("Running");
+        try {
+          const result = await api("/v1/demo");
+          state.lastResult = result;
+          $("jsonOutput").textContent = pretty(result);
+          const entries = Object.entries(result.scenarios || {});
+          $("reasons").innerHTML = entries
+            .map(
+              ([name, value]) =>
+                `<li>${escapeHtml(name)}: ${escapeHtml(value.decision)} at risk ${Number(value.risk_score).toFixed(2)}</li>`,
+            )
+            .join("");
+          $("componentGrid").innerHTML = entries
+            .map(
+              ([name, value]) => `
+                <div class="component-card ${escapeHtml(value.decision)}">
+                  <span>${escapeHtml(name)}</span>
+                  <strong>${escapeHtml(value.recommended_action)}</strong>
+                </div>
+              `,
+            )
+            .join("");
+          const crisis = result.scenarios?.combined_safety_privacy_crisis;
+          if (crisis) {
+            $("decisionName").textContent = "Demo Pack";
+            setDecisionVisual(crisis.decision);
+            setDecisionPill($("riskLevel"), crisis.decision);
+            $("recommendedAction").textContent = crisis.recommended_action || "-";
+            $("riskScore").textContent = Number(crisis.risk_score || 0).toFixed(2);
+            $("slamScore").textContent = "0.00";
+            $("privacyScore").textContent = "0.00";
+            setBar("riskBar", crisis.risk_score);
+            setBar("slamBar", 0);
+            setBar("privacyBar", 0);
+            $("actionApplied").textContent = "-";
+            $("replayDetected").textContent = "-";
+          }
+        } catch (error) {
+          setErrorState(error);
         }
       }
 

@@ -53,6 +53,17 @@ def test_root_head(client):
     assert client.head("/").status_code == 200
 
 
+def test_dashboard_has_decision_and_risk_visual_states(client):
+    html = client.get("/").text
+
+    assert 'id="decisionBox"' in html
+    assert ".decision.block" in html
+    assert ".decision.critical" in html
+    assert ".pill.critical" in html
+    assert "function setDecisionVisual" in html
+    assert "setErrorState" in html
+
+
 def test_evaluate_safe(client):
     request = scenario_request("normal_navigation", 42).model_dump(mode="json")
     request["request_id"] = "api-safe"
