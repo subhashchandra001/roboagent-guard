@@ -44,6 +44,12 @@ def test_discovery_exposes_autonomy_model(client):
     assert capabilities["autonomy_model"]["default"] == "agent_autonomous"
     assert capabilities["autonomy_model"]["human_intervention"] == "exception_only"
     assert agent_card["autonomy_model"] == capabilities["autonomy_model"]
+    assert capabilities["runtime_mode"] == "self_contained"
+    assert capabilities["external_dependencies"]["count"] == 0
+    assert capabilities["external_dependencies"]["required"] is False
+    assert len(capabilities["internal_components"]) == 5
+    assert len(agent_card["internal_components"]) == 5
+    assert agent_card["external_dependencies"]["required"] is False
     assert capabilities["demo_endpoints"]["runtime_readiness"] == "GET /v1/readiness"
     assert capabilities["demo_endpoints"]["judge_skill_test"] == "POST /v1/agent-skill-test"
     assert agent_card["demo_endpoints"]["runtime_readiness"]["path"] == "/v1/readiness"
@@ -68,10 +74,18 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert 'id="runSafe" aria-pressed="false"' in html
     assert 'id="readinessScore"' in html
     assert 'id="readinessText"' in html
+    assert 'id="proofAgentCount"' in html
+    assert 'id="proofScenarioCount"' in html
+    assert 'id="proofExternalCount"' in html
+    assert 'id="agentMap"' in html
+    assert 'id="runtimeMode"' in html
     assert 'api("/v1/readiness")' in html
     assert "--readiness-fill" in html
     assert '<div class="readiness-ring"><strong>82</strong></div>' not in html
+    assert "<strong>10</strong>" not in html
     assert "conic-gradient(var(--accent) 0 82%" not in html
+    assert "function setEvaluateEnabled" in html
+    assert "runSelected\").disabled" in html
     assert "function setActiveDemoButton" in html
     assert "setAttribute(\"aria-pressed\", String(isActive))" in html
     assert "function setDecisionVisual" in html
@@ -82,8 +96,8 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert '"aggregate demo"' in html
     assert '"skill test"' in html
     assert '"mission plan"' in html
-    assert '$("selectedExpected").textContent = "skill test";' in html
-    assert '$("selectedExpected").textContent = "mission plan";' in html
+    assert 'clearScenarioSelection("skill test")' in html
+    assert 'clearScenarioSelection("mission plan")' in html
     assert "setErrorState" in html
     assert "document.execCommand(\"copy\")" in html
     assert '"demo pack"' not in html

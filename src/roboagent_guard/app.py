@@ -104,6 +104,22 @@ def capabilities(state: StateDep) -> dict[str, Any]:
     return {
         "service": "roboagent-guard",
         "policy_version": state.settings.policy_version,
+        "runtime_mode": "self_contained",
+        "external_dependencies": {
+            "required": False,
+            "count": 0,
+            "description": (
+                "No ROS, Gazebo, database, Redis, external LLM, external API, "
+                "or paid service is required."
+            ),
+        },
+        "internal_components": [
+            {"name": "authorization", "label": "Authorization", "role": "role + action policy"},
+            {"name": "physical_risk", "label": "Physical Risk", "role": "motion hard constraints"},
+            {"name": "slam_reliability", "label": "SLAM", "role": "confidence gates"},
+            {"name": "privacy", "label": "Privacy", "role": "metadata policy"},
+            {"name": "replay_and_freshness", "label": "Replay", "role": "nonce + freshness"},
+        ],
         "supported_actions": [item.value for item in ActionType],
         "supported_decisions": [item.value for item in Decision],
         "autonomy_model": {

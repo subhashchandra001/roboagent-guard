@@ -17,6 +17,15 @@ def agent_card(base_url: str, version: str) -> dict[str, object]:
         "health_url": f"{base}/health",
         "capabilities_url": f"{base}/capabilities",
         "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
+        "runtime_mode": "self_contained",
+        "external_dependencies": {"required": False, "count": 0},
+        "internal_components": [
+            "authorization",
+            "physical_risk",
+            "slam_reliability",
+            "privacy",
+            "replay_and_freshness",
+        ],
         "demo_endpoints": {
             "runtime_readiness": {"method": "GET", "path": "/v1/readiness"},
             "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},

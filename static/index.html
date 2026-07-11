@@ -361,6 +361,13 @@
         box-shadow: 0 14px 32px rgba(80, 242, 194, 0.2);
       }
 
+      .button:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+        transform: none;
+        box-shadow: none;
+      }
+
       .button.secondary {
         color: var(--text);
         border-color: var(--line);
@@ -1219,15 +1226,15 @@
             </p>
             <div class="hero-proof" aria-label="Service proof points">
               <div class="proof-item">
-                <strong>5</strong>
+                <strong id="proofAgentCount">-</strong>
                 <span>internal risk agents</span>
               </div>
               <div class="proof-item">
-                <strong>10</strong>
+                <strong id="proofScenarioCount">-</strong>
                 <span>deterministic scenarios</span>
               </div>
               <div class="proof-item">
-                <strong>0</strong>
+                <strong id="proofExternalCount">-</strong>
                 <span>external services</span>
               </div>
             </div>
@@ -1275,11 +1282,7 @@
             <p class="muted" id="capabilityText">
               Loading policy and scenario capabilities from the API.
             </p>
-            <div class="agent-map" aria-label="Internal agents">
-              <div class="agent-chip"><strong>Replay</strong><span>nonce memory</span><i></i></div>
-              <div class="agent-chip"><strong>Safety</strong><span>hard constraints</span><i></i></div>
-              <div class="agent-chip"><strong>SLAM</strong><span>confidence gates</span><i></i></div>
-              <div class="agent-chip"><strong>Privacy</strong><span>metadata only</span><i></i></div>
+            <div class="agent-map" id="agentMap" aria-label="Internal agents">
             </div>
           </div>
           <div class="readiness-card" aria-hidden="true">
@@ -1301,7 +1304,7 @@
             </div>
             <div class="metric">
               <span>Mode</span>
-              <strong>Local</strong>
+              <strong id="runtimeMode">-</strong>
             </div>
           </div>
         </aside>
@@ -1453,6 +1456,11 @@
         });
       }
 
+      function setEvaluateEnabled(enabled) {
+        $("runSelected").disabled = !enabled;
+        $("runSelected").setAttribute("aria-disabled", String(!enabled));
+      }
+
       function setDecisionVisual(value) {
         const stateClass = String(value || "running")
           .toLowerCase()
@@ -1582,11 +1590,27 @@
         $("scenarioCount").textContent = scenarios.length;
         $("policyVersion").textContent = capabilities.policy_version;
         $("actionCount").textContent = capabilities.supported_actions.length;
+        $("proofAgentCount").textContent = capabilities.internal_components?.length || "-";
+        $("proofScenarioCount").textContent = scenarios.length;
+        $("proofExternalCount").textContent = capabilities.external_dependencies?.count ?? "-";
+        $("runtimeMode").textContent = String(capabilities.runtime_mode || "runtime")
+          .replaceAll("_", " ");
         const readinessScore = Math.max(0, Math.min(100, Number(readiness.score || 0)));
         $("readinessScore").textContent = String(readinessScore);
         $("readinessText").textContent =
           `${readiness.passed}/${readiness.total} runtime checks ${readiness.status}`;
         document.documentElement.style.setProperty("--readiness-fill", `${readinessScore}%`);
+        $("agentMap").innerHTML = (capabilities.internal_components || [])
+          .map(
+            (component) => `
+              <div class="agent-chip">
+                <strong>${escapeHtml(component.label || component.name)}</strong>
+                <span>${escapeHtml(component.role || "")}</span>
+                <i></i>
+              </div>
+            `,
+          )
+          .join("");
 
         state.scenarios = scenarios;
         state.selected = scenarios.find((item) => item.name === "normal_navigation")?.name || scenarios[0].name;
@@ -1599,6 +1623,7 @@
           .map((item) => `<option value="${item.name}">${item.name}</option>`)
           .join("");
         select.value = state.selected;
+        setEvaluateEnabled(Boolean(state.selected));
 
         const selected = state.scenarios.find((item) => item.name === state.selected);
         $("selectedExpected").textContent = `expected: ${selected?.expected_decision || "-"}`;
@@ -1629,11 +1654,12 @@
         renderScenarios();
       }
 
-      function clearScenarioSelection() {
+      function clearScenarioSelection(label = "aggregate demo") {
         state.selected = "";
         const select = $("scenarioSelect");
         if (select) select.value = "";
-        $("selectedExpected").textContent = "aggregate demo";
+        setEvaluateEnabled(false);
+        $("selectedExpected").textContent = label;
         document.querySelectorAll(".scenario-item").forEach((item) => {
           item.classList.remove("active");
         });
@@ -1762,7 +1788,7 @@
 
       async function runAgentSkillTest() {
         setActiveDemoButton("");
-        $("selectedExpected").textContent = "skill test";
+        clearScenarioSelection("skill test");
         $("agentTestStatus").textContent = "Running";
         $("agentTestStatus").className = "status-word wait";
         try {
@@ -1803,7 +1829,7 @@
 
       async function runComposedPlanner() {
         setActiveDemoButton("");
-        $("selectedExpected").textContent = "mission plan";
+        clearScenarioSelection("mission plan");
         $("composeStatus").textContent = "Running";
         $("composeStatus").className = "status-word wait";
         try {
@@ -1847,7 +1873,9 @@
         setActiveDemoButton("");
         renderScenarios();
       });
-      $("runSelected").addEventListener("click", () => runScenario(state.selected));
+      $("runSelected").addEventListener("click", () => {
+        if (state.selected) runScenario(state.selected);
+      });
       $("runSafe").addEventListener("click", () => runScenario("normal_navigation"));
       $("runCrisis").addEventListener("click", () => runScenario("combined_safety_privacy_crisis"));
       $("runAll").addEventListener("click", runDemo);

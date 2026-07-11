@@ -169,6 +169,15 @@ Example response:
 {
   "service": "roboagent-guard",
   "policy_version": "1.0.0",
+  "runtime_mode": "self_contained",
+  "external_dependencies": {"required": false, "count": 0},
+  "internal_components": [
+    {"name": "authorization", "label": "Authorization", "role": "role + action policy"},
+    {"name": "physical_risk", "label": "Physical Risk", "role": "motion hard constraints"},
+    {"name": "slam_reliability", "label": "SLAM", "role": "confidence gates"},
+    {"name": "privacy", "label": "Privacy", "role": "metadata policy"},
+    {"name": "replay_and_freshness", "label": "Replay", "role": "nonce + freshness"}
+  ],
   "supported_actions": ["navigate", "stop", "slow_down", "rotate", "relocalize", "save_map", "update_map", "share_sensor_summary", "share_raw_camera", "disable_storage", "return_to_base"],
   "supported_decisions": ["approve", "approve_with_constraints", "modify", "block", "request_human_approval"],
   "autonomy_model": {"default": "agent_autonomous", "human_intervention": "exception_only"},
@@ -207,6 +216,9 @@ Example response:
   "health_url": "PUBLIC_BASE_URL/health",
   "capabilities_url": "PUBLIC_BASE_URL/capabilities",
   "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
+  "runtime_mode": "self_contained",
+  "external_dependencies": {"required": false, "count": 0},
+  "internal_components": ["authorization", "physical_risk", "slam_reliability", "privacy", "replay_and_freshness"],
   "demo_endpoints": {
     "runtime_readiness": {"method": "GET", "path": "/v1/readiness"},
     "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},
