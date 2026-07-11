@@ -1466,6 +1466,23 @@
         $("traceHash").textContent = "trace pending";
       }
 
+      function clearTracePanel({ label, pill = "summary", trace = "summary", stateClass = "running" }) {
+        $("decisionName").textContent = label;
+        setDecisionVisual(stateClass);
+        setDecisionPill($("riskLevel"), pill);
+        $("traceHash").textContent = trace;
+        $("riskScore").textContent = "0.00";
+        $("slamScore").textContent = "0.00";
+        $("privacyScore").textContent = "0.00";
+        setBar("riskBar", 0);
+        setBar("slamBar", 0);
+        setBar("privacyBar", 0);
+        $("recommendedAction").textContent = "-";
+        $("actionApplied").textContent = "-";
+        $("replayDetected").textContent = "-";
+        $("componentGrid").innerHTML = "";
+      }
+
       function setErrorState(error) {
         $("decisionName").textContent = "Error";
         setDecisionVisual("critical");
@@ -1609,7 +1626,7 @@
         state.selected = "";
         const select = $("scenarioSelect");
         if (select) select.value = "";
-        $("selectedExpected").textContent = "demo pack";
+        $("selectedExpected").textContent = "aggregate demo";
         document.querySelectorAll(".scenario-item").forEach((item) => {
           item.classList.remove("active");
         });
@@ -1648,6 +1665,50 @@
         $("jsonOutput").textContent = pretty(result);
       }
 
+      function renderDemoPack(result) {
+        state.lastResult = result;
+        const entries = Object.entries(result.scenarios || {});
+        const scores = entries.map(([, value]) => Number(value.risk_score || 0));
+        const maxRisk = Math.max(0, ...scores);
+        const blocked = entries.filter(([, value]) => value.decision === "block").length;
+        const modified = entries.filter(([, value]) => value.decision === "modify").length;
+        const approved = entries.filter(([, value]) => value.decision === "approve").length;
+        const constrained = entries.filter(
+          ([, value]) => value.decision === "approve_with_constraints",
+        ).length;
+
+        $("jsonOutput").textContent = pretty(result);
+        $("reasons").innerHTML = entries
+          .map(
+            ([name, value]) =>
+              `<li>${escapeHtml(name)}: ${escapeHtml(value.decision)} at risk ${Number(value.risk_score).toFixed(2)}</li>`,
+          )
+          .join("");
+        $("componentGrid").innerHTML = entries
+          .map(
+            ([name, value]) => `
+              <div class="component-card ${escapeHtml(value.decision)}">
+                <span>${escapeHtml(name)} / ${Number(value.risk_score || 0).toFixed(2)}</span>
+                <strong>${escapeHtml(value.decision)} -> ${escapeHtml(value.recommended_action)}</strong>
+              </div>
+            `,
+          )
+          .join("");
+        $("decisionName").textContent = "Demo Pack";
+        setDecisionVisual(blocked ? "critical" : modified ? "high" : "low");
+        setDecisionPill($("riskLevel"), `${entries.length} scenarios`);
+        $("traceHash").textContent = "aggregate demo";
+        $("recommendedAction").textContent = `${approved} approve / ${constrained} constrain / ${modified} modify / ${blocked} block`;
+        $("riskScore").textContent = maxRisk.toFixed(2);
+        $("slamScore").textContent = "mixed";
+        $("privacyScore").textContent = "mixed";
+        setBar("riskBar", maxRisk);
+        setBar("slamBar", maxRisk);
+        setBar("privacyBar", maxRisk);
+        $("actionApplied").textContent = blocked ? "mixed" : "yes";
+        $("replayDetected").textContent = "mixed";
+      }
+
       async function runScenario(name) {
         selectScenario(name);
         if (name === "normal_navigation") {
@@ -1672,41 +1733,7 @@
         setRunningState("Running");
         try {
           const result = await api("/v1/demo");
-          state.lastResult = result;
-          $("jsonOutput").textContent = pretty(result);
-          const entries = Object.entries(result.scenarios || {});
-          $("reasons").innerHTML = entries
-            .map(
-              ([name, value]) =>
-                `<li>${escapeHtml(name)}: ${escapeHtml(value.decision)} at risk ${Number(value.risk_score).toFixed(2)}</li>`,
-            )
-            .join("");
-          $("componentGrid").innerHTML = entries
-            .map(
-              ([name, value]) => `
-                <div class="component-card ${escapeHtml(value.decision)}">
-                  <span>${escapeHtml(name)}</span>
-                  <strong>${escapeHtml(value.recommended_action)}</strong>
-                </div>
-              `,
-            )
-            .join("");
-          const crisis = result.scenarios?.combined_safety_privacy_crisis;
-          if (crisis) {
-            $("decisionName").textContent = "Demo Pack";
-            setDecisionVisual(crisis.decision);
-            setDecisionPill($("riskLevel"), crisis.decision);
-            $("traceHash").textContent = "demo pack";
-            $("recommendedAction").textContent = crisis.recommended_action || "-";
-            $("riskScore").textContent = Number(crisis.risk_score || 0).toFixed(2);
-            $("slamScore").textContent = "0.00";
-            $("privacyScore").textContent = "0.00";
-            setBar("riskBar", crisis.risk_score);
-            setBar("slamBar", 0);
-            setBar("privacyBar", 0);
-            $("actionApplied").textContent = "mixed";
-            $("replayDetected").textContent = "mixed";
-          }
+          renderDemoPack(result);
         } catch (error) {
           setErrorState(error);
         }
@@ -1727,12 +1754,20 @@
       }
 
       async function runAgentSkillTest() {
+        setActiveDemoButton("");
+        $("selectedExpected").textContent = "skill test";
         $("agentTestStatus").textContent = "Running";
         $("agentTestStatus").className = "status-word wait";
         try {
           const result = await api("/v1/agent-skill-test", { method: "POST" });
           $("agentTestStatus").textContent = result.passed ? "PASS" : "CHECK";
           $("agentTestStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
+          clearTracePanel({
+            label: result.passed ? "Judge Pass" : "Judge Check",
+            pill: result.passed ? "pass" : "review",
+            trace: "skill test",
+            stateClass: result.passed ? "approve" : "running",
+          });
           renderStepRows(
             "agentTestSteps",
             (result.steps || []).map((step) => ({
@@ -1742,6 +1777,12 @@
             })),
           );
           state.lastResult = result;
+          $("reasons").innerHTML = (result.steps || [])
+            .map(
+              (step) =>
+                `<li>${escapeHtml(String(step.step || "").replaceAll("_", " "))}: ${step.passed ? "pass" : "review"}</li>`,
+            )
+            .join("");
           $("jsonOutput").textContent = pretty(result);
         } catch (error) {
           $("agentTestStatus").textContent = "ERROR";
@@ -1754,12 +1795,20 @@
       }
 
       async function runComposedPlanner() {
+        setActiveDemoButton("");
+        $("selectedExpected").textContent = "mission plan";
         $("composeStatus").textContent = "Running";
         $("composeStatus").className = "status-word wait";
         try {
           const result = await api("/v1/compose/mission-plan", { method: "POST" });
           $("composeStatus").textContent = result.passed ? "PASS" : "CHECK";
           $("composeStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
+          clearTracePanel({
+            label: result.passed ? "Plan Pass" : "Plan Check",
+            pill: result.passed ? "pass" : "review",
+            trace: "mission plan",
+            stateClass: result.passed ? "approve" : "running",
+          });
           renderStepRows(
             "composeSteps",
             (result.plan || []).map((step) => ({
@@ -1769,6 +1818,12 @@
             })),
           );
           state.lastResult = result;
+          $("reasons").innerHTML = (result.plan || [])
+            .map(
+              (step) =>
+                `<li>${escapeHtml(step.source_scenario)}: ${escapeHtml(step.autonomous_outcome)}</li>`,
+            )
+            .join("");
           $("jsonOutput").textContent = pretty(result);
         } catch (error) {
           $("composeStatus").textContent = "ERROR";

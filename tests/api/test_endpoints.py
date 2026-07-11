@@ -68,8 +68,17 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert "function setDecisionVisual" in html
     assert "function selectScenario" in html
     assert "function clearScenarioSelection" in html
+    assert "function clearTracePanel" in html
+    assert "function renderDemoPack" in html
+    assert '"aggregate demo"' in html
+    assert '"skill test"' in html
+    assert '"mission plan"' in html
+    assert '$("selectedExpected").textContent = "skill test";' in html
+    assert '$("selectedExpected").textContent = "mission plan";' in html
     assert "setErrorState" in html
     assert "document.execCommand(\"copy\")" in html
+    assert '"demo pack"' not in html
+    assert '"riskLevel"), crisis.decision' not in html
 
 
 def test_evaluate_safe(client):
