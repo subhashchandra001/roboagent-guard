@@ -366,6 +366,17 @@
         background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(102, 166, 255, 0.08));
       }
 
+      .button.active,
+      .button.secondary.active {
+        color: #03140d;
+        border-color: rgba(121, 242, 157, 0.86);
+        background:
+          linear-gradient(135deg, rgba(121, 242, 157, 0.98), rgba(108, 249, 216, 0.88));
+        box-shadow:
+          0 0 0 1px rgba(121, 242, 157, 0.3),
+          0 16px 34px rgba(80, 242, 194, 0.24);
+      }
+
       .hero-visual {
         display: grid;
         width: min(345px, 100%);
@@ -1426,6 +1437,12 @@
         element.textContent = value || "waiting";
       }
 
+      function setActiveDemoButton(activeId) {
+        ["runSafe", "runCrisis", "runAll"].forEach((id) => {
+          $(id).classList.toggle("active", id === activeId);
+        });
+      }
+
       function setDecisionVisual(value) {
         const stateClass = String(value || "running")
           .toLowerCase()
@@ -1567,6 +1584,7 @@
         document.querySelectorAll(".scenario-item").forEach((item) => {
           item.addEventListener("click", () => {
             state.selected = item.dataset.name;
+            setActiveDemoButton("");
             renderScenarios();
           });
         });
@@ -1576,6 +1594,16 @@
         if (!state.scenarios.some((item) => item.name === name)) return;
         state.selected = name;
         renderScenarios();
+      }
+
+      function clearScenarioSelection() {
+        state.selected = "";
+        const select = $("scenarioSelect");
+        if (select) select.value = "";
+        $("selectedExpected").textContent = "demo pack";
+        document.querySelectorAll(".scenario-item").forEach((item) => {
+          item.classList.remove("active");
+        });
       }
 
       function renderResult(result) {
@@ -1613,6 +1641,13 @@
 
       async function runScenario(name) {
         selectScenario(name);
+        if (name === "normal_navigation") {
+          setActiveDemoButton("runSafe");
+        } else if (name === "combined_safety_privacy_crisis") {
+          setActiveDemoButton("runCrisis");
+        } else {
+          setActiveDemoButton("");
+        }
         setRunningState("Running");
         try {
           const result = await api(`/v1/scenarios/${name}/run?seed=42`, { method: "POST" });
@@ -1623,6 +1658,8 @@
       }
 
       async function runDemo() {
+        setActiveDemoButton("runAll");
+        clearScenarioSelection();
         setRunningState("Running");
         try {
           const result = await api("/v1/demo");
@@ -1736,6 +1773,7 @@
 
       $("scenarioSelect").addEventListener("change", (event) => {
         state.selected = event.target.value;
+        setActiveDemoButton("");
         renderScenarios();
       });
       $("runSelected").addEventListener("click", () => runScenario(state.selected));
