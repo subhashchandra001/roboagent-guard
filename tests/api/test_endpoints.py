@@ -60,6 +60,7 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert ".decision.block" in html
     assert ".decision.critical" in html
     assert ".pill.critical" in html
+    assert ".actions .button" in html
     assert ".button.active" in html
     assert "function setActiveDemoButton" in html
     assert "function setDecisionVisual" in html
