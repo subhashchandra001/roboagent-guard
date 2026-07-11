@@ -61,7 +61,9 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert ".decision.critical" in html
     assert ".pill.critical" in html
     assert "function setDecisionVisual" in html
+    assert "function selectScenario" in html
     assert "setErrorState" in html
+    assert "document.execCommand(\"copy\")" in html
 
 
 def test_evaluate_safe(client):

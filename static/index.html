@@ -1419,7 +1419,10 @@
       }
 
       function setDecisionPill(element, value) {
-        element.className = `pill ${String(value || "").toLowerCase()}`;
+        const stateClass = String(value || "waiting")
+          .toLowerCase()
+          .replaceAll(" ", "_");
+        element.className = `pill ${stateClass}`;
         element.textContent = value || "waiting";
       }
 
@@ -1434,6 +1437,7 @@
         $("decisionName").textContent = label;
         setDecisionVisual("running");
         setDecisionPill($("riskLevel"), "waiting");
+        $("traceHash").textContent = "trace pending";
       }
 
       function setErrorState(error) {
@@ -1443,6 +1447,7 @@
         $("recommendedAction").textContent = "-";
         $("actionApplied").textContent = "-";
         $("replayDetected").textContent = "-";
+        $("traceHash").textContent = "trace error";
         $("reasons").innerHTML = `<li>${escapeHtml(error.message || String(error))}</li>`;
         $("jsonOutput").textContent = error.stack || String(error);
       }
@@ -1567,6 +1572,12 @@
         });
       }
 
+      function selectScenario(name) {
+        if (!state.scenarios.some((item) => item.name === name)) return;
+        state.selected = name;
+        renderScenarios();
+      }
+
       function renderResult(result) {
         state.lastResult = result;
         $("decisionName").textContent = result.decision || "Ready";
@@ -1601,6 +1612,7 @@
       }
 
       async function runScenario(name) {
+        selectScenario(name);
         setRunningState("Running");
         try {
           const result = await api(`/v1/scenarios/${name}/run?seed=42`, { method: "POST" });
@@ -1638,6 +1650,7 @@
             $("decisionName").textContent = "Demo Pack";
             setDecisionVisual(crisis.decision);
             setDecisionPill($("riskLevel"), crisis.decision);
+            $("traceHash").textContent = "demo pack";
             $("recommendedAction").textContent = crisis.recommended_action || "-";
             $("riskScore").textContent = Number(crisis.risk_score || 0).toFixed(2);
             $("slamScore").textContent = "0.00";
@@ -1645,8 +1658,8 @@
             setBar("riskBar", crisis.risk_score);
             setBar("slamBar", 0);
             setBar("privacyBar", 0);
-            $("actionApplied").textContent = "-";
-            $("replayDetected").textContent = "-";
+            $("actionApplied").textContent = "mixed";
+            $("replayDetected").textContent = "mixed";
           }
         } catch (error) {
           setErrorState(error);
@@ -1660,7 +1673,7 @@
               <div class="step-row ${row.passed === false ? "" : "pass"}">
                 <i aria-hidden="true"></i>
                 <strong>${escapeHtml(row.label)}</strong>
-                <span class="pill">${escapeHtml(row.value)}</span>
+                <span class="pill ${row.passed === false ? "error" : "approve"}">${escapeHtml(row.value)}</span>
               </div>
             `,
           )
@@ -1670,37 +1683,55 @@
       async function runAgentSkillTest() {
         $("agentTestStatus").textContent = "Running";
         $("agentTestStatus").className = "status-word wait";
-        const result = await api("/v1/agent-skill-test", { method: "POST" });
-        $("agentTestStatus").textContent = result.passed ? "PASS" : "CHECK";
-        $("agentTestStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
-        renderStepRows(
-          "agentTestSteps",
-          (result.steps || []).map((step) => ({
-            passed: step.passed,
-            label: String(step.step || "").replaceAll("_", " "),
-            value: step.passed ? "pass" : "review",
-          })),
-        );
-        state.lastResult = result;
-        $("jsonOutput").textContent = pretty(result);
+        try {
+          const result = await api("/v1/agent-skill-test", { method: "POST" });
+          $("agentTestStatus").textContent = result.passed ? "PASS" : "CHECK";
+          $("agentTestStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
+          renderStepRows(
+            "agentTestSteps",
+            (result.steps || []).map((step) => ({
+              passed: step.passed,
+              label: String(step.step || "").replaceAll("_", " "),
+              value: step.passed ? "pass" : "review",
+            })),
+          );
+          state.lastResult = result;
+          $("jsonOutput").textContent = pretty(result);
+        } catch (error) {
+          $("agentTestStatus").textContent = "ERROR";
+          $("agentTestStatus").className = "status-word wait";
+          renderStepRows("agentTestSteps", [
+            { passed: false, label: "agent skill test", value: error.message || "failed" },
+          ]);
+          setErrorState(error);
+        }
       }
 
       async function runComposedPlanner() {
         $("composeStatus").textContent = "Running";
         $("composeStatus").className = "status-word wait";
-        const result = await api("/v1/compose/mission-plan", { method: "POST" });
-        $("composeStatus").textContent = result.passed ? "PASS" : "CHECK";
-        $("composeStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
-        renderStepRows(
-          "composeSteps",
-          (result.plan || []).map((step) => ({
-            passed: step.autonomous_outcome !== "request_human_review",
-            label: `${step.index}. ${step.source_scenario}`,
-            value: step.autonomous_outcome,
-          })),
-        );
-        state.lastResult = result;
-        $("jsonOutput").textContent = pretty(result);
+        try {
+          const result = await api("/v1/compose/mission-plan", { method: "POST" });
+          $("composeStatus").textContent = result.passed ? "PASS" : "CHECK";
+          $("composeStatus").className = `status-word ${result.passed ? "pass" : "wait"}`;
+          renderStepRows(
+            "composeSteps",
+            (result.plan || []).map((step) => ({
+              passed: step.autonomous_outcome !== "request_human_review",
+              label: `${step.index}. ${step.source_scenario}`,
+              value: step.autonomous_outcome,
+            })),
+          );
+          state.lastResult = result;
+          $("jsonOutput").textContent = pretty(result);
+        } catch (error) {
+          $("composeStatus").textContent = "ERROR";
+          $("composeStatus").className = "status-word wait";
+          renderStepRows("composeSteps", [
+            { passed: false, label: "composed planner", value: error.message || "failed" },
+          ]);
+          setErrorState(error);
+        }
       }
 
       $("scenarioSelect").addEventListener("change", (event) => {
@@ -1714,7 +1745,19 @@
       $("runAgentTest").addEventListener("click", runAgentSkillTest);
       $("runCompose").addEventListener("click", runComposedPlanner);
       $("copyResult").addEventListener("click", async () => {
-        await navigator.clipboard.writeText($("jsonOutput").textContent);
+        try {
+          await navigator.clipboard.writeText($("jsonOutput").textContent);
+        } catch {
+          const copySource = document.createElement("textarea");
+          copySource.value = $("jsonOutput").textContent;
+          copySource.style.position = "fixed";
+          copySource.style.opacity = "0";
+          document.body.appendChild(copySource);
+          copySource.focus();
+          copySource.select();
+          document.execCommand("copy");
+          copySource.remove();
+        }
         $("copyResult").textContent = "Copied";
         setTimeout(() => {
           $("copyResult").textContent = "Copy JSON";
