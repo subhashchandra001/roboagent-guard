@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 from roboagent_guard.audit.store import AuditStore
 from roboagent_guard.audit.verification import verify_audit_chain
 from roboagent_guard.config import Settings
+from roboagent_guard.dependencies import AppState
 from roboagent_guard.security.approval_tokens import ApprovalTokenStore
 from roboagent_guard.security.replay_guard import ReplayGuard
 from roboagent_guard.simulator.runner import EvaluationEngine
@@ -51,3 +53,16 @@ def test_api_client_uses_isolated_audit_path(client, tmp_path):
 
     assert response.status_code == 200
     assert (tmp_path / "audit.jsonl").exists()
+
+
+def test_app_state_audit_store_initialization_is_thread_safe(tmp_path):
+    settings = Settings.model_validate(
+        {"AUDIT_PATH": tmp_path / "audit.jsonl", "NANDA_TRACE_DIR": tmp_path / "nanda"}
+    )
+    state = AppState(settings=settings)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        stores = list(pool.map(lambda _: state.audit_store(), range(32)))
+
+    assert len({id(store) for store in stores}) == 1
+    assert stores[0].path == settings.audit_path

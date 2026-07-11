@@ -18,6 +18,7 @@ from roboagent_guard.simulator.scenarios import scenario_request
         "/skill.md",
         "/capabilities",
         "/.well-known/agent.json",
+        "/v1/readiness",
         "/v1/scenarios",
         "/v1/demo",
     ],
@@ -43,7 +44,9 @@ def test_discovery_exposes_autonomy_model(client):
     assert capabilities["autonomy_model"]["default"] == "agent_autonomous"
     assert capabilities["autonomy_model"]["human_intervention"] == "exception_only"
     assert agent_card["autonomy_model"] == capabilities["autonomy_model"]
+    assert capabilities["demo_endpoints"]["runtime_readiness"] == "GET /v1/readiness"
     assert capabilities["demo_endpoints"]["judge_skill_test"] == "POST /v1/agent-skill-test"
+    assert agent_card["demo_endpoints"]["runtime_readiness"]["path"] == "/v1/readiness"
     assert agent_card["demo_endpoints"]["composed_mission_planner"]["path"] == (
         "/v1/compose/mission-plan"
     )
@@ -63,6 +66,12 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert ".actions .button" in html
     assert ".button.active" in html
     assert 'id="runSafe" aria-pressed="false"' in html
+    assert 'id="readinessScore"' in html
+    assert 'id="readinessText"' in html
+    assert 'api("/v1/readiness")' in html
+    assert "--readiness-fill" in html
+    assert '<div class="readiness-ring"><strong>82</strong></div>' not in html
+    assert "conic-gradient(var(--accent) 0 82%" not in html
     assert "function setActiveDemoButton" in html
     assert "setAttribute(\"aria-pressed\", String(isActive))" in html
     assert "function setDecisionVisual" in html
@@ -79,6 +88,29 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert "document.execCommand(\"copy\")" in html
     assert '"demo pack"' not in html
     assert '"riskLevel"), crisis.decision' not in html
+
+
+def test_readiness_score_is_runtime_calculated(client, tmp_path):
+    response = client.get("/v1/readiness")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["service"] == "roboagent-guard"
+    assert body["score"] == 100
+    assert body["status"] == "ready"
+    assert body["passed"] == body["total"] == 5
+    assert [check["name"] for check in body["checks"]] == [
+        "health",
+        "capabilities",
+        "scenario_regression",
+        "skill_judge",
+        "composed_planner",
+    ]
+    assert all(check["passed"] for check in body["checks"])
+    scenario_check = body["checks"][2]
+    assert scenario_check["evidence"]["passed"] == 10
+    assert scenario_check["evidence"]["total"] == 10
+    assert not (tmp_path / "audit.jsonl").exists()
 
 
 def test_evaluate_safe(client):

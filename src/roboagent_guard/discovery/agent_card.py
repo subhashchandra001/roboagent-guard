@@ -18,6 +18,7 @@ def agent_card(base_url: str, version: str) -> dict[str, object]:
         "capabilities_url": f"{base}/capabilities",
         "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
         "demo_endpoints": {
+            "runtime_readiness": {"method": "GET", "path": "/v1/readiness"},
             "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},
             "composed_mission_planner": {"method": "POST", "path": "/v1/compose/mission-plan"},
             "decision_receipt": {"method": "GET", "path": "/v1/receipts/{evaluation_id}"},

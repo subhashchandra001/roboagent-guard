@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from threading import Lock
 
 from roboagent_guard.audit.store import AuditStore
 from roboagent_guard.config import Settings, get_settings
@@ -16,10 +17,12 @@ class AppState:
     token_store: ApprovalTokenStore = field(default_factory=ApprovalTokenStore)
     evaluations: dict[str, EvaluationResponse] = field(default_factory=dict)
     _audit_store: AuditStore | None = None
+    _audit_store_lock: Lock = field(default_factory=Lock)
 
     def audit_store(self) -> AuditStore:
-        if self._audit_store is None or self._audit_store.path != self.settings.audit_path:
-            self._audit_store = AuditStore(self.settings.audit_path)
+        with self._audit_store_lock:
+            if self._audit_store is None or self._audit_store.path != self.settings.audit_path:
+                self._audit_store = AuditStore(self.settings.audit_path)
         return self._audit_store
 
 

@@ -11,6 +11,7 @@
     <style>
       :root {
         color-scheme: dark;
+        --readiness-fill: 0%;
         --bg: #050815;
         --panel: rgba(10, 18, 34, 0.82);
         --panel-strong: rgba(12, 22, 42, 0.96);
@@ -640,7 +641,7 @@
         border-radius: 50%;
         background:
           radial-gradient(circle, #0b1628 0 54%, transparent 55%),
-          conic-gradient(var(--accent) 0 82%, rgba(255, 255, 255, 0.09) 82% 100%);
+          conic-gradient(var(--accent) 0 var(--readiness-fill), rgba(255, 255, 255, 0.09) var(--readiness-fill) 100%);
         box-shadow:
           0 0 44px rgba(108, 249, 216, 0.16),
           inset 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -1282,8 +1283,8 @@
             </div>
           </div>
           <div class="readiness-card" aria-hidden="true">
-            <div class="readiness-ring"><strong>82</strong></div>
-            <span>Policy readiness score from deterministic local checks</span>
+            <div class="readiness-ring"><strong id="readinessScore">-</strong></div>
+            <span id="readinessText">Runtime readiness from deterministic checks</span>
           </div>
           <div class="metrics">
             <div class="metric">
@@ -1567,10 +1568,11 @@
       }
 
       async function loadHealth() {
-        const [health, capabilities, scenarios] = await Promise.all([
+        const [health, capabilities, scenarios, readiness] = await Promise.all([
           api("/health"),
           api("/capabilities"),
           api("/v1/scenarios"),
+          api("/v1/readiness"),
         ]);
 
         $("statusDot").classList.add("ok");
@@ -1580,6 +1582,11 @@
         $("scenarioCount").textContent = scenarios.length;
         $("policyVersion").textContent = capabilities.policy_version;
         $("actionCount").textContent = capabilities.supported_actions.length;
+        const readinessScore = Math.max(0, Math.min(100, Number(readiness.score || 0)));
+        $("readinessScore").textContent = String(readinessScore);
+        $("readinessText").textContent =
+          `${readiness.passed}/${readiness.total} runtime checks ${readiness.status}`;
+        document.documentElement.style.setProperty("--readiness-fill", `${readinessScore}%`);
 
         state.scenarios = scenarios;
         state.selected = scenarios.find((item) => item.name === "normal_navigation")?.name || scenarios[0].name;

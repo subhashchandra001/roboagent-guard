@@ -134,11 +134,196 @@ def capabilities(state: StateDep) -> dict[str, Any]:
         ],
         "scenario_names": [item["name"] for item in list_scenarios()],
         "demo_endpoints": {
+            "runtime_readiness": "GET /v1/readiness",
             "judge_skill_test": "POST /v1/agent-skill-test",
             "composed_mission_planner": "POST /v1/compose/mission-plan",
             "decision_receipt": "GET /v1/receipts/{evaluation_id}",
             "verify_receipt": "POST /v1/receipts/verify",
         },
+    }
+
+
+@app.get("/v1/readiness")
+def readiness(state: StateDep) -> dict[str, object]:
+    checks: list[dict[str, object]] = []
+
+    checks.append(
+        {
+            "name": "health",
+            "label": "Health endpoint",
+            "passed": health().status == "ok",
+            "evidence": {"service": "roboagent-guard", "version": "1.0.0"},
+        }
+    )
+
+    capability_data = capabilities(state)
+    supported_actions = capability_data["supported_actions"]
+    supported_decisions = capability_data["supported_decisions"]
+    checks.append(
+        {
+            "name": "capabilities",
+            "label": "Capability discovery",
+            "passed": bool(supported_actions) and bool(supported_decisions),
+            "evidence": {
+                "actions": len(supported_actions),
+                "decisions": len(supported_decisions),
+                "policy_version": capability_data["policy_version"],
+            },
+        }
+    )
+
+    runner = demo_engine(state)
+    scenario_results = []
+    for item in list_scenarios():
+        request = scenario_request(item["name"], seed=42)
+        request.request_id = f"readiness-{item['name']}"
+        request.nonce = f"readiness-nonce-{item['name']}"
+        if item["name"] == "replayed_approved_action":
+            runner.evaluate(request.model_copy(deep=True), audit=False)
+            response = runner.evaluate(request.model_copy(deep=True), audit=False)
+        else:
+            response = runner.evaluate(request, audit=False)
+        scenario_results.append(
+            {
+                "name": item["name"],
+                "expected_decision": item["expected_decision"],
+                "actual_decision": response.decision,
+                "passed": response.decision == item["expected_decision"],
+            }
+        )
+    checks.append(
+        {
+            "name": "scenario_regression",
+            "label": "Scenario expected decisions",
+            "passed": all(bool(item["passed"]) for item in scenario_results),
+            "evidence": {
+                "passed": sum(1 for item in scenario_results if item["passed"]),
+                "total": len(scenario_results),
+                "scenarios": scenario_results,
+            },
+        }
+    )
+
+    skill = skill_md(state)
+    required_skill_phrases = [
+        "Call `GET /health` first.",
+        "POST /v1/evaluate",
+        "If the decision is `modify`, do not execute the original action",
+        "If the decision is `block`, execute nothing.",
+        "Default mode: no routine human intervention.",
+    ]
+    skill_steps = [
+        {
+            "step": "read_skill_md",
+            "passed": all(phrase in skill for phrase in required_skill_phrases),
+        },
+        {"step": "read_capabilities", "passed": True},
+    ]
+    representative_expectations = {
+        "normal_navigation": Decision.APPROVE,
+        "low_light_slow_motion": Decision.APPROVE_WITH_CONSTRAINTS,
+        "low_light_high_speed": Decision.MODIFY,
+        "combined_safety_privacy_crisis": Decision.BLOCK,
+    }
+    representative_results = []
+    representative_runner = demo_engine(state)
+    for scenario_name, expected in representative_expectations.items():
+        request = scenario_request(scenario_name, seed=42)
+        request.request_id = f"readiness-skill-{scenario_name}"
+        request.nonce = f"readiness-skill-nonce-{scenario_name}"
+        response = representative_runner.evaluate(request, audit=False)
+        representative_results.append(
+            {
+                "scenario": scenario_name,
+                "passed": response.decision == expected,
+                "human_intervention_required": response.human_approval_required,
+                "actual_decision": response.decision,
+            }
+        )
+    skill_steps.append(
+        {
+            "step": "evaluate_representative_actions",
+            "passed": all(item["passed"] for item in representative_results),
+        }
+    )
+    skill_steps.append(
+        {
+            "step": "confirm_exception_only_human_review",
+            "passed": all(
+                not item["human_intervention_required"]
+                for item in representative_results
+                if item["actual_decision"] != Decision.REQUEST_HUMAN_APPROVAL
+            ),
+        }
+    )
+    checks.append(
+        {
+            "name": "skill_judge",
+            "label": "SkillMD judge proof",
+            "passed": all(bool(step["passed"]) for step in skill_steps),
+            "evidence": {
+                "steps": [
+                    {"step": step["step"], "passed": step["passed"]}
+                    for step in skill_steps
+                    if isinstance(step, dict)
+                ],
+            },
+        }
+    )
+
+    mission = [
+        "normal_navigation",
+        "low_light_high_speed",
+        "person_in_private_zone",
+        "unauthorized_camera_request",
+        "combined_safety_privacy_crisis",
+    ]
+    plan_runner = demo_engine(state)
+    plan_steps = []
+    for index, scenario_name in enumerate(mission, start=1):
+        request = scenario_request(scenario_name, seed=42)
+        request.request_id = f"readiness-plan-{index}-{scenario_name}"
+        request.nonce = f"readiness-plan-nonce-{index}-{scenario_name}"
+        response = plan_runner.evaluate(request, audit=False)
+        plan_steps.append(
+            {
+                "guard_decision": response.decision,
+                "autonomous_outcome": autonomy_outcome(response),
+            }
+        )
+    checks.append(
+        {
+            "name": "composed_planner",
+            "label": "Composed planner proof",
+            "passed": all(
+                step["autonomous_outcome"] != "request_human_review" for step in plan_steps
+            ),
+            "evidence": {
+                "steps": len(plan_steps),
+                "blocked_steps": sum(
+                    1 for step in plan_steps if step["guard_decision"] == Decision.BLOCK
+                ),
+                "modified_steps": sum(
+                    1 for step in plan_steps if step["guard_decision"] == Decision.MODIFY
+                ),
+                "constrained_steps": sum(
+                    1
+                    for step in plan_steps
+                    if step["guard_decision"] == Decision.APPROVE_WITH_CONSTRAINTS
+                ),
+            },
+        }
+    )
+
+    passed_count = sum(1 for item in checks if item["passed"])
+    score = round((passed_count / len(checks)) * 100) if checks else 0
+    return {
+        "service": "roboagent-guard",
+        "score": score,
+        "status": "ready" if score == 100 else "review",
+        "passed": passed_count,
+        "total": len(checks),
+        "checks": checks,
     }
 
 

@@ -175,6 +175,7 @@ Example response:
   "required_fields": ["request_id", "nonce", "timestamp", "caller", "action", "robot_state", "perception", "privacy", "simulation_seed"],
   "optional_fields": ["evaluation_time", "approval", "client_risk_score", "safety_approved", "metadata"],
   "demo_endpoints": {
+    "runtime_readiness": "GET /v1/readiness",
     "judge_skill_test": "POST /v1/agent-skill-test",
     "composed_mission_planner": "POST /v1/compose/mission-plan",
     "decision_receipt": "GET /v1/receipts/{evaluation_id}",
@@ -207,6 +208,7 @@ Example response:
   "capabilities_url": "PUBLIC_BASE_URL/capabilities",
   "primary_endpoint": {"method": "POST", "path": "/v1/evaluate"},
   "demo_endpoints": {
+    "runtime_readiness": {"method": "GET", "path": "/v1/readiness"},
     "judge_skill_test": {"method": "POST", "path": "/v1/agent-skill-test"},
     "composed_mission_planner": {"method": "POST", "path": "/v1/compose/mission-plan"},
     "decision_receipt": {"method": "GET", "path": "/v1/receipts/{evaluation_id}"},
@@ -408,6 +410,35 @@ Example response:
     "unauthorized_camera_request": {"decision": "block", "risk_score": 1.0, "recommended_action": "stop"},
     "combined_safety_privacy_crisis": {"decision": "block", "risk_score": 1.0, "recommended_action": "stop"}
   }
+}
+```
+
+### GET /v1/readiness
+
+Returns a runtime readiness score calculated from deterministic local checks. This endpoint is read-only: it does not append audit records or execute external services.
+
+Example:
+
+```bash
+curl --fail PUBLIC_BASE_URL/v1/readiness
+```
+
+Example response:
+
+```json
+{
+  "service": "roboagent-guard",
+  "score": 100,
+  "status": "ready",
+  "passed": 5,
+  "total": 5,
+  "checks": [
+    {"name": "health", "passed": true},
+    {"name": "capabilities", "passed": true},
+    {"name": "scenario_regression", "passed": true},
+    {"name": "skill_judge", "passed": true},
+    {"name": "composed_planner", "passed": true}
+  ]
 }
 ```
 
