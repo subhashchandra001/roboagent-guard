@@ -62,7 +62,9 @@ def test_dashboard_has_decision_and_risk_visual_states(client):
     assert ".pill.critical" in html
     assert ".actions .button" in html
     assert ".button.active" in html
+    assert 'id="runSafe" aria-pressed="false"' in html
     assert "function setActiveDemoButton" in html
+    assert "setAttribute(\"aria-pressed\", String(isActive))" in html
     assert "function setDecisionVisual" in html
     assert "function selectScenario" in html
     assert "function clearScenarioSelection" in html

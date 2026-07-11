@@ -1231,9 +1231,9 @@
               </div>
             </div>
             <div class="actions">
-              <button class="button" id="runSafe">Run safe demo</button>
-              <button class="button secondary" id="runCrisis">Run crisis demo</button>
-              <button class="button secondary" id="runAll">Run full demo</button>
+              <button class="button secondary" id="runSafe" aria-pressed="false">Run safe demo</button>
+              <button class="button secondary" id="runCrisis" aria-pressed="false">Run crisis demo</button>
+              <button class="button secondary" id="runAll" aria-pressed="false">Run full demo</button>
             </div>
           </div>
           <div class="hero-visual" aria-hidden="true">
@@ -1446,7 +1446,9 @@
 
       function setActiveDemoButton(activeId) {
         ["runSafe", "runCrisis", "runAll"].forEach((id) => {
-          $(id).classList.toggle("active", id === activeId);
+          const isActive = id === activeId;
+          $(id).classList.toggle("active", isActive);
+          $(id).setAttribute("aria-pressed", String(isActive));
         });
       }
 
